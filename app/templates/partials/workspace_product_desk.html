@@ -1,0 +1,118 @@
+<!-- UX03B_PRODUCT_DESK_START -->
+<section class="product-desk" id="product-desk" aria-label="Mesa de Produto e Seções">
+  <header class="product-desk__head">
+    <div class="product-desk__identity">
+      <label class="product-desk__select-wrap">
+        <span class="product-desk__label">Produto ativo</span>
+        <select id="product-select" aria-label="Produto ativo" disabled>
+          <option value="">Carregando Produtos…</option>
+        </select>
+      </label>
+      <button class="product-desk__primary" id="new-product-button" type="button">Novo produto</button>
+    </div>
+    <div class="product-desk__feedback" id="product-desk-feedback" role="status" aria-live="polite">Consultando Produtos…</div>
+  </header>
+
+  <nav class="product-spine" aria-label="Seções do Produto">
+    <div class="product-spine__scroll" id="product-spine"></div>
+    <button class="product-spine__organize" id="organize-sections-button" type="button" disabled>Organizar seções</button>
+  </nav>
+
+  <div class="product-desk__body" id="product-desk-body">
+    <div class="product-empty">Carregando a Mesa…</div>
+  </div>
+
+  <details class="auxiliary-workspace" id="workspace-blocks" {% if active_block %}open{% endif %}>
+    <summary class="auxiliary-workspace__summary">
+      <span>Blocos do Workspace</span>
+      <span class="auxiliary-workspace__count">{{ blocks|length }} ATIVOS</span>
+    </summary>
+    <div class="auxiliary-workspace__body">
+      <form class="block-form" id="create-block-form" method="post" action="/api/workspaces/{{ workspace.id }}/blocks" data-desk-reload-action>
+        <div class="block-form__row">
+          <input name="title" maxlength="256" required placeholder="Título do bloco — ex.: Vínculo João ↔ Empresa X">
+          <button type="submit">Criar bloco</button>
+        </div>
+        <textarea name="summary" maxlength="4000" placeholder="Resumo opcional do raciocínio ou ponto que você quer investigar."></textarea>
+        <div class="block-form__hint">Selecione à esquerda os elementos que sustentam ou contextualizam este bloco.</div>
+      </form>
+
+      <div id="workspace-block-list">
+        {% for item in blocks %}
+        <a class="block-card {% if active_block and active_block.id == item.id %}block-card--active{% endif %}" href="/workspace/{{ case.case_ref }}?block={{ item.id }}" data-desk-navigation data-block-id="{{ item.id }}" data-block-title="{{ item.title }}">
+          <div class="block-card__title">{{ item.title }}</div>
+          {% if item.summary %}<div class="block-card__summary">{{ item.summary }}</div>{% endif %}
+          <div class="block-card__meta">BLOCO {{ item.id }} · {{ item.sources|length }} fonte(s) · {{ item.status }}</div>
+        </a>
+        {% else %}
+        <div class="empty-list">Ainda não há blocos. Selecione elementos do caso e crie o primeiro.</div>
+        {% endfor %}
+      </div>
+
+      {% if active_block %}
+      <section class="active-block">
+        <div class="workspace-pane__eyebrow">Bloco ativo</div>
+        <div class="workspace-pane__title">{{ active_block.title }}</div>
+        {% if active_block.summary %}<p style="font-size:12px;line-height:1.6;color:var(--text-secondary)">{{ active_block.summary }}</p>{% endif %}
+        <div class="block-undo-row">
+          <form method="post" action="/api/workspaces/{{ workspace.id }}/blocks/{{ active_block.id }}/undo" data-desk-reload-action data-confirm-message="Desfazer a criação deste bloco? O caso e as fontes originais não serão alterados.">
+            <button class="block-undo-button" type="submit">Desfazer criação do bloco</button>
+          </form>
+        </div>
+        {% for source in active_block.sources %}
+        <div class="source-pill">
+          <div class="source-pill__type">{{ source.source_type }}</div>
+          <div class="source-pill__label">{{ source.source_label_snapshot }}</div>
+          <div class="source-pill__key">{{ source.source_key }}</div>
+          <form class="source-pill__remove" method="post" action="/api/workspaces/{{ workspace.id }}/blocks/{{ active_block.id }}/sources/{{ source.id }}/remove" data-desk-reload-action data-confirm-message="Remover esta fonte apenas deste bloco? O elemento original do caso será preservado.">
+            <button type="submit">Remover</button>
+          </form>
+        </div>
+        {% endfor %}
+      </section>
+      {% endif %}
+    </div>
+  </details>
+</section>
+
+<dialog class="desk-dialog" id="new-product-dialog">
+  <form method="dialog" id="new-product-form">
+    <header class="desk-dialog__head"><h2>Novo produto</h2></header>
+    <div class="desk-dialog__body">
+      <p class="desk-dialog__copy">Crie o Produto sem capítulos predefinidos. As Seções serão adicionadas depois.</p>
+      <label class="desk-dialog__field"><span class="product-desk__label">Título</span><input id="new-product-title" maxlength="256" required autocomplete="off"></label>
+      <div class="product-desk__feedback" id="new-product-feedback" role="status"></div>
+    </div>
+    <footer class="desk-dialog__actions"><button id="cancel-new-product" type="button">Cancelar</button><button class="product-desk__primary" id="confirm-new-product" type="submit">Criar produto</button></footer>
+  </form>
+</dialog>
+
+<dialog class="desk-dialog" id="organize-sections-dialog">
+  <div>
+    <header class="desk-dialog__head"><h2>Organizar seções</h2></header>
+    <div class="desk-dialog__body">
+      <div id="organizer-feedback" class="product-desk__feedback" role="status"></div>
+      <ul class="organizer-list" id="organizer-list"></ul>
+      <label class="desk-dialog__field"><span class="product-desk__label">Nova seção</span><input id="new-section-title" maxlength="256" placeholder="Título da seção"></label>
+      <button id="add-section-button" type="button">Adicionar seção</button>
+    </div>
+    <footer class="desk-dialog__actions"><button id="cancel-organizer-button" type="button">Cancelar</button><button class="product-desk__primary" id="apply-order-button" type="button" disabled>Aplicar ordem</button></footer>
+  </div>
+</dialog>
+
+<dialog class="desk-dialog" id="link-sections-dialog">
+  <div>
+    <header class="desk-dialog__head"><h2>Ajustar vínculos</h2></header>
+    <div class="desk-dialog__body"><div id="link-feedback" class="product-desk__feedback" role="status"></div><ul class="link-picker-list" id="link-picker-list"></ul></div>
+    <footer class="desk-dialog__actions"><button id="cancel-links-button" type="button">Cancelar</button><button class="product-desk__primary" id="apply-links-button" type="button">Aplicar vínculos</button></footer>
+  </div>
+</dialog>
+
+<dialog class="desk-dialog" id="pending-changes-dialog">
+  <div>
+    <header class="desk-dialog__head"><h2>Alterações locais pendentes</h2></header>
+    <div class="desk-dialog__body"><p class="desk-dialog__copy">Antes de continuar, escolha o que fazer com as alterações de texto, vínculos ou ordem desta Mesa.</p><div id="pending-changes-feedback" class="product-desk__feedback" role="status"></div></div>
+    <footer class="desk-dialog__actions"><button id="stay-button" type="button">Permanecer</button><button id="discard-pending-button" type="button">Descartar alterações locais</button><button class="product-desk__primary" id="save-pending-button" type="button">Salvar e continuar</button></footer>
+  </div>
+</dialog>
+<!-- UX03B_PRODUCT_DESK_END -->

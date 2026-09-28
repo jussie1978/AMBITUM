@@ -813,6 +813,8 @@ body.workspace-resizing *{
 .workspace-page #pane-context .pool-intake-dropzone.is-error{border-color:var(--error);color:var(--error)}
 .workspace-page #pane-context .pool-intake-dropzone[aria-busy="true"]{cursor:wait}
 
+{% include "partials/workspace_product_desk_styles.html" %}
+
 </style>
 
 <section class="workspace-page">
@@ -820,6 +822,7 @@ body.workspace-resizing *{
     <a
       class="workspace-brand"
       href="/platea/{{ case.case_ref }}"
+      data-desk-navigation
       title="Voltar ao Gestor de Investiga??es"
     >
       <span class="workspace-brand__back">&larr;</span>
@@ -985,6 +988,7 @@ body.workspace-resizing *{
             <a
               class="document-original-link"
               href="/api/documents/{{ item.id }}/original"
+              data-desk-navigation
               title="Recuperar o original fisico"
             >ORIGINAL</a>
             {% endif %}
@@ -1049,49 +1053,7 @@ body.workspace-resizing *{
         <div class="workspace-pane__eyebrow">MESA</div>
         <div class="workspace-pane__title">CONSTRU&Ccedil;&Atilde;O DO RELAT&Oacute;RIO</div>
       </div>
-      <div class="work-area">
-        <form class="block-form" id="create-block-form" method="post" action="/api/workspaces/{{ workspace.id }}/blocks">
-          <div class="block-form__row">
-            <input name="title" maxlength="256" required placeholder="Título do bloco — ex.: Vínculo João ↔ Empresa X">
-            <button type="submit">Criar bloco</button>
-          </div>
-          <textarea name="summary" maxlength="4000" placeholder="Resumo opcional do raciocínio ou ponto que você quer investigar."></textarea>
-          <div class="block-form__hint">Selecione à esquerda os elementos que sustentam ou contextualizam este bloco.</div>
-        </form>
-
-        {% for item in blocks %}
-        <a class="block-card {% if active_block and active_block.id == item.id %}block-card--active{% endif %}" href="/workspace/{{ case.case_ref }}?block={{ item.id }}">
-          <div class="block-card__title">{{ item.title }}</div>
-          {% if item.summary %}<div class="block-card__summary">{{ item.summary }}</div>{% endif %}
-          <div class="block-card__meta">BLOCO {{ item.id }} · {{ item.sources|length }} fonte(s) · {{ item.status }}</div>
-        </a>
-        {% else %}
-        <div class="empty-list">Ainda não há blocos. Selecione elementos do caso e crie o primeiro.</div>
-        {% endfor %}
-
-        {% if active_block %}
-        <section class="active-block">
-          <div class="workspace-pane__eyebrow">Bloco ativo</div>
-          <div class="workspace-pane__title">{{ active_block.title }}</div>
-          {% if active_block.summary %}<p style="font-size:12px;line-height:1.6;color:var(--text-secondary)">{{ active_block.summary }}</p>{% endif %}
-          <div class="block-undo-row">
-            <form method="post" action="/api/workspaces/{{ workspace.id }}/blocks/{{ active_block.id }}/undo" onsubmit="return confirm('Desfazer a criação deste bloco? O caso e as fontes originais não serão alterados.');">
-              <button class="block-undo-button" type="submit">Desfazer criação do bloco</button>
-            </form>
-          </div>
-          {% for source in active_block.sources %}
-          <div class="source-pill">
-            <div class="source-pill__type">{{ source.source_type }}</div>
-            <div class="source-pill__label">{{ source.source_label_snapshot }}</div>
-            <div class="source-pill__key">{{ source.source_key }}</div>
-            <form class="source-pill__remove" method="post" action="/api/workspaces/{{ workspace.id }}/blocks/{{ active_block.id }}/sources/{{ source.id }}/remove" onsubmit="return confirm('Remover esta fonte apenas deste bloco? O elemento original do caso será preservado.');">
-              <button type="submit">Remover</button>
-            </form>
-          </div>
-          {% endfor %}
-        </section>
-        {% endif %}
-      </div>
+      {% include "partials/workspace_product_desk.html" %}
     </main>
 
     <div class="workspace-splitter" id="splitter-athena" role="separator" aria-orientation="vertical" aria-label="Redimensionar Mesa e coluna direita" title="Arraste para redimensionar. Duplo clique restaura o layout.">
@@ -1194,6 +1156,8 @@ const stream=document.getElementById('athena-stream');
 const empty=document.getElementById('athena-empty');
 const modeBtn=document.getElementById('workspace-mode');
 
+{% include "partials/workspace_product_desk_script.html" %}
+
 // AT06B_CURATED_01_DOCUMENT_INTAKE_UI
 const documentIntakeTrigger=document.getElementById('document-intake-trigger');
 const documentIntakeInput=document.getElementById('document-intake-input');
@@ -1251,8 +1215,9 @@ function restoreDocumentIntakeFeedback(){
   }catch(_){}
 }
 
-documentIntakeTrigger?.addEventListener('click',()=>{
+documentIntakeTrigger?.addEventListener('click',async()=>{
   if(documentIntakeBusy)return;
+  if(!(await workspaceDeskGuard.canContinue()))return;
   documentIntakeInput?.click();
 });
 
@@ -1292,6 +1257,7 @@ async function presentDocumentIntakeProgress(file){
 
 async function incorporateDocumentFile(file){
   if(!file||documentIntakeBusy)return;
+  if(!(await workspaceDeskGuard.canContinue()))return;
   const originalText=documentIntakeTrigger?.textContent||'INCORPORAR MATERIAL';
   setDocumentIntakeBusy(true);
   setDocumentIntakeFeedback(
@@ -1341,7 +1307,7 @@ async function incorporateDocumentFile(file){
       setDocumentIntakeBusy(false);
       if(documentIntakeTrigger)documentIntakeTrigger.textContent=originalText;
       if(documentIntakeInput)documentIntakeInput.value='';
-      window.location.reload();
+      workspaceDeskGuard.run(()=>window.location.reload());
       return;
     }
 
@@ -1797,6 +1763,7 @@ const undoSelectionBtn=document.getElementById('undo-selection');
 const clearSelectionBtn=document.getElementById('clear-selection');
 const selectionCount=document.getElementById('selection-count');
 let selectionHistory=[];
+let selectionControlsLocked=false;
 let history=[];let recentAction=null;let busy=false;
 
 function selectionSnapshot(){return sourceCheckboxes.map(item=>item.checked)}
@@ -1807,9 +1774,10 @@ function restoreSelection(snapshot){
 function updateSelectionControls(){
   const count=sourceCheckboxes.filter(item=>item.checked).length;
   selectionCount.textContent=count===1?'1 elemento selecionado':count+' elementos selecionados';
-  undoSelectionBtn.disabled=selectionHistory.length===0;
-  clearSelectionBtn.disabled=count===0;
+  undoSelectionBtn.disabled=selectionControlsLocked||selectionHistory.length===0;
+  clearSelectionBtn.disabled=selectionControlsLocked||count===0;
 }
+function setBlockSelectionLocked(locked){selectionControlsLocked=Boolean(locked);updateSelectionControls()}
 sourceCheckboxes.forEach((item,index)=>{
   item.addEventListener('change',()=>{
     const before=selectionSnapshot();
@@ -1820,10 +1788,12 @@ sourceCheckboxes.forEach((item,index)=>{
   });
 });
 undoSelectionBtn.addEventListener('click',()=>{
+  if(selectionControlsLocked)return;
   const previous=selectionHistory.pop();
   if(previous)restoreSelection(previous);
 });
 clearSelectionBtn.addEventListener('click',()=>{
+  if(selectionControlsLocked)return;
   const before=selectionSnapshot();
   if(!before.some(Boolean))return;
   selectionHistory.push(before);

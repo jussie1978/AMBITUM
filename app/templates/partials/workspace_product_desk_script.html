@@ -1,0 +1,444 @@
+// UX03B_PRODUCT_DESK_V1
+const productDesk=document.getElementById('product-desk');
+const productSelect=document.getElementById('product-select');
+const deskFeedback=document.getElementById('product-desk-feedback');
+const deskBody=document.getElementById('product-desk-body');
+const workPane=document.getElementById('pane-work');
+const spine=document.getElementById('product-spine');
+const organizeButton=document.getElementById('organize-sections-button');
+const newProductButton=document.getElementById('new-product-button');
+const newProductDialog=document.getElementById('new-product-dialog');
+const newProductForm=document.getElementById('new-product-form');
+const newProductTitle=document.getElementById('new-product-title');
+const newProductFeedback=document.getElementById('new-product-feedback');
+const cancelNewProductButton=document.getElementById('cancel-new-product');
+const confirmNewProductButton=document.getElementById('confirm-new-product');
+const organizerDialog=document.getElementById('organize-sections-dialog');
+const organizerList=document.getElementById('organizer-list');
+const organizerFeedback=document.getElementById('organizer-feedback');
+const newSectionTitle=document.getElementById('new-section-title');
+const addSectionButton=document.getElementById('add-section-button');
+const applyOrderButton=document.getElementById('apply-order-button');
+const cancelOrganizerButton=document.getElementById('cancel-organizer-button');
+const linksDialog=document.getElementById('link-sections-dialog');
+const linkPickerList=document.getElementById('link-picker-list');
+const linkFeedback=document.getElementById('link-feedback');
+const applyLinksButton=document.getElementById('apply-links-button');
+const cancelLinksButton=document.getElementById('cancel-links-button');
+const pendingDialog=document.getElementById('pending-changes-dialog');
+const pendingFeedback=document.getElementById('pending-changes-feedback');
+const workspaceId={{ workspace.id }};
+const operatorName={{ (operator.get('username') or 'operator')|tojson }};
+const productApi='/api/workspaces/'+workspaceId+'/products';
+const focusProductKey='circe-athena.workspace.product.'+operatorName+'.'+workspaceId;
+const focusSectionPrefix='circe-athena.workspace.section.'+operatorName+'.'+workspaceId+'.';
+const workScrollKey='circe-athena.workspace.work-scroll.'+operatorName+'.'+workspaceId;
+const activeBlocks=Array.from(document.querySelectorAll('#workspace-block-list [data-block-id]')).map(item=>({id:Number(item.dataset.blockId),title:item.dataset.blockTitle||('Bloco '+item.dataset.blockId)}));
+let products=[];
+let confirmedProduct=null;
+let activeProductId=null;
+let activeSectionId=null;
+let readSequence=0;
+let mutationTail=Promise.resolve();
+let mutationBusy=false;
+let sectionDrafts=new Map();
+let orderDraft=null;
+let linkDrafts=new Map();
+let productTransition=null;
+let createProductBusy=false;
+let createProductOperation=null;
+let legacyNavigationBusy=false;
+let guardDecision=null;
+let guardClosing=false;
+let organizerClosing=false;
+let linksClosing=false;
+let newProductClosing=false;
+
+class DeskRequestError extends Error{
+  constructor(message,{status=0,payload=null,uncertain=false,auth=false}={}){super(message);this.status=status;this.payload=payload;this.uncertain=uncertain;this.auth=auth}
+}
+
+function setDeskFeedback(message,kind=''){
+  deskFeedback.textContent=message||'';
+  deskFeedback.className='product-desk__feedback'+(kind?' is-'+kind:'');
+}
+function setLocalFeedback(element,message,kind=''){
+  if(!element)return;
+  element.textContent=message||'';
+  element.className='product-desk__feedback'+(kind?' is-'+kind:'');
+}
+function safeStorageGet(key){try{return localStorage.getItem(key)}catch(_){return null}}
+function safeStorageSet(key,value){try{localStorage.setItem(key,String(value))}catch(_){}}
+function safeSessionStorageGet(key){try{return sessionStorage.getItem(key)}catch(_){return null}}
+function safeSessionStorageSet(key,value){try{sessionStorage.setItem(key,String(value))}catch(_){}}
+function savedWorkScrollState(){
+  const stored=safeSessionStorageGet(workScrollKey);if(stored===null)return null;
+  let parsed;try{parsed=JSON.parse(stored)}catch(_){parsed=stored}
+  const top=Number(parsed?.top??parsed);if(!Number.isFinite(top)||top<0)return null;
+  const blockId=Number(parsed?.blockId);const anchorOffset=Number(parsed?.anchorOffset);
+  return {top,blockId:Number.isInteger(blockId)&&blockId>0?blockId:null,anchorOffset:Number.isFinite(anchorOffset)?anchorOffset:null};
+}
+function navigationBlockId(link){
+  const direct=Number(link?.dataset?.blockId);if(Number.isInteger(direct)&&direct>0)return direct;
+  try{const value=Number(new URL(link.href,window.location.href).searchParams.get('block'));return Number.isInteger(value)&&value>0?value:null}catch(_){return null}
+}
+function workBlockAnchor(blockId){return Array.from(document.querySelectorAll('#workspace-block-list [data-block-id]')).find(item=>Number(item.dataset.blockId)===Number(blockId))||null}
+function preserveWorkScroll(link){
+  if(!workPane)return;
+  const blockId=navigationBlockId(link);const anchor=workBlockAnchor(blockId);const paneRect=workPane.getBoundingClientRect();const anchorRect=anchor?.getBoundingClientRect();
+  safeSessionStorageSet(workScrollKey,JSON.stringify({top:workPane.scrollTop,scrollHeight:workPane.scrollHeight,clientHeight:workPane.clientHeight,blockId,anchorOffset:anchorRect?anchorRect.top-paneRect.top:null}));
+}
+function applyWorkScrollState(state=savedWorkScrollState()){
+  if(!workPane||!state)return false;
+  const anchor=workBlockAnchor(state.blockId);
+  if(anchor&&state.anchorOffset!==null){const paneTop=workPane.getBoundingClientRect().top;const currentOffset=anchor.getBoundingClientRect().top-paneTop;workPane.scrollTop+=currentOffset-state.anchorOffset;return true}
+  workPane.scrollTop=state.top;return true;
+}
+async function restoreWorkScrollAfterRender(){
+  if(!savedWorkScrollState())return;
+  try{if(document.fonts?.ready)await document.fonts.ready}catch(_){}
+  await new Promise(resolve=>requestAnimationFrame(resolve));
+  applyWorkScrollState();
+}
+function urlId(name){const value=Number(new URL(window.location.href).searchParams.get(name));return Number.isInteger(value)&&value>0?value:null}
+function sectionById(id,product=confirmedProduct){return product?.sections?.find(item=>item.id===Number(id))||null}
+function arraysEqual(left,right){return left.length===right.length&&left.every((value,index)=>value===right[index])}
+function persistedOrder(){return confirmedProduct?.sections?.map(item=>item.id)||[]}
+function persistedLinks(sectionId){return sectionById(sectionId)?.blocks?.map(item=>item.block_id)||[]}
+function currentOrder(){return orderDraft?.ids||persistedOrder()}
+function currentLinks(sectionId){return linkDrafts.get(Number(sectionId))?.ids||persistedLinks(sectionId)}
+function sectionIsDirty(id){const draft=sectionDrafts.get(Number(id));const section=sectionById(id);return Boolean(draft&&section&&(draft.title!==section.title||draft.body!==section.body))}
+function orderIsDirty(){return Boolean(orderDraft&&!arraysEqual(orderDraft.ids,persistedOrder()))}
+function linksAreDirty(id){const draft=linkDrafts.get(Number(id));return Boolean(draft&&!arraysEqual(draft.ids,persistedLinks(id)))}
+function hasPendingChanges(){return [...sectionDrafts.keys()].some(sectionIsDirty)||orderIsDirty()||[...linkDrafts.keys()].some(linksAreDirty)}
+function updateBeforeUnload(){window.onbeforeunload=hasPendingChanges()?event=>{event.preventDefault();event.returnValue='';}:null}
+function focusUrl(productId,sectionId){
+  const url=new URL(window.location.href);
+  if(productId)url.searchParams.set('product',productId);else url.searchParams.delete('product');
+  if(sectionId)url.searchParams.set('section',sectionId);else url.searchParams.delete('section');
+  window.history.replaceState({product:productId,section:sectionId},'',url);
+  if(productId)safeStorageSet(focusProductKey,productId);
+  if(productId&&sectionId)safeStorageSet(focusSectionPrefix+productId,sectionId);
+}
+function focusedHref(href,productId=activeProductId,sectionId=activeSectionId){const url=new URL(href,window.location.href);if(productId)url.searchParams.set('product',productId);if(sectionId)url.searchParams.set('section',sectionId);return url.href}
+function interactionBusy(){return mutationBusy||Boolean(productTransition)||createProductBusy||legacyNavigationBusy}
+function renderInteractionState(){
+  const busy=interactionBusy();const contextLocked=Boolean(productTransition)||legacyNavigationBusy;productDesk?.classList.toggle('is-loading',contextLocked);
+  productDesk?.setAttribute('aria-busy',String(busy));
+  productSelect.disabled=busy||!products.length;
+  newProductButton.disabled=busy;
+  organizeButton.disabled=busy||!confirmedProduct;
+  productDesk?.querySelectorAll('.section-editor input,.section-editor textarea').forEach(item=>{item.disabled=contextLocked});
+  productDesk?.querySelectorAll('.section-editor button,.product-spine__item').forEach(item=>{item.disabled=busy});
+  renderMutationState();
+}
+
+async function requestJson(url,options={}){
+  let response;
+  try{response=await fetch(url,{...options,headers:{'Accept':'application/json',...(options.body?{'Content-Type':'application/json'}:{}),...(options.headers||{})},redirect:'manual'})}
+  catch(_){throw new DeskRequestError('A conexão falhou. O resultado pode ser incerto; o rascunho foi preservado.',{uncertain:Boolean(options.method&&options.method!=='GET')})}
+  const type=response.headers.get('content-type')||'';
+  if(response.type==='opaqueredirect'||response.status>=300&&response.status<400||response.redirected&&new URL(response.url).pathname.includes('/login')){
+    throw new DeskRequestError('A sessão expirou. Copie o texto pendente antes de ir ao login.',{status:response.status,auth:true,uncertain:Boolean(options.method&&options.method!=='GET')});
+  }
+  let payload=null;
+  if(type.includes('application/json')){try{payload=await response.json()}catch(_){throw new DeskRequestError('O servidor devolveu JSON inválido; nenhuma confirmação foi assumida.',{status:response.status,uncertain:Boolean(options.method&&options.method!=='GET')})}}
+  else throw new DeskRequestError('A resposta não era JSON (possível tela de login). Nenhuma confirmação foi assumida.',{status:response.status,auth:true,uncertain:Boolean(options.method&&options.method!=='GET')});
+  if(!response.ok)throw new DeskRequestError(payload?.error||('Falha HTTP '+response.status+'.'),{status:response.status,payload});
+  return payload;
+}
+function enqueueMutation(task){
+  if(interactionBusy())return Promise.resolve(false);
+  mutationBusy=true;renderInteractionState();
+  const run=async()=>{try{return await task()}finally{mutationBusy=false;renderInteractionState()}};
+  const result=mutationTail.catch(()=>{}).then(run);mutationTail=result.catch(()=>{});return result;
+}
+function renderMutationState(){
+  const busy=interactionBusy();
+  productDesk?.querySelectorAll('[data-mutation-action]').forEach(item=>{item.disabled=busy});
+  if(applyOrderButton)applyOrderButton.disabled=busy||!orderIsDirty();
+  if(applyLinksButton)applyLinksButton.disabled=busy;
+  if(addSectionButton)addSectionButton.disabled=busy;
+}
+
+function chooseSection(product,preferred=null){
+  if(!product?.sections?.length)return null;
+  const candidates=[preferred,urlId('section'),Number(safeStorageGet(focusSectionPrefix+product.id)),product.sections[0].id];
+  return candidates.find(id=>product.sections.some(section=>section.id===Number(id)))||product.sections[0].id;
+}
+function applyProduct(product,{preferredSection=null,replaceContext=false}={}){
+  const previousProductId=activeProductId;
+  if(previousProductId!==null&&product.id!==previousProductId&&!replaceContext)return false;
+  if(previousProductId===product.id&&confirmedProduct&&product.revision<confirmedProduct.revision)return false;
+  if(previousProductId!==null&&product.id!==previousProductId){sectionDrafts.clear();orderDraft=null;linkDrafts.clear()}
+  confirmedProduct=product;
+  activeProductId=product.id;
+  const validDraftIds=new Set(product.sections.map(item=>item.id));
+  for(const id of sectionDrafts.keys())if(!validDraftIds.has(id))sectionDrafts.delete(id);
+  for(const id of linkDrafts.keys())if(!validDraftIds.has(id))linkDrafts.delete(id);
+  const previousSection=previousProductId===product.id?activeSectionId:null;
+  activeSectionId=chooseSection(product,preferredSection||previousSection);
+  const inventory=products.find(item=>item.id===product.id);
+  if(inventory){inventory.title=product.title;inventory.revision=product.revision;inventory.section_count=product.sections.length}
+  renderAll();
+  return true;
+}
+function renderProductSelect(){
+  const counts=new Map();products.forEach(item=>counts.set(item.title,(counts.get(item.title)||0)+1));
+  productSelect.replaceChildren();
+  if(!products.length){const option=new Option('Nenhum Produto','');productSelect.add(option)}
+  products.forEach(item=>{const label=item.title+(counts.get(item.title)>1?' · #'+item.id:'');productSelect.add(new Option(label,String(item.id)))});
+  productSelect.disabled=interactionBusy()||!products.length;productSelect.value=activeProductId?String(activeProductId):'';
+}
+function renderSpine(){
+  spine.replaceChildren();
+  const sections=confirmedProduct?.sections||[];
+  sections.forEach(section=>{
+    const button=document.createElement('button');button.type='button';button.className='product-spine__item'+(section.id===activeSectionId?' is-active':'');button.textContent=section.title;button.title=section.title;button.dataset.sectionId=section.id;button.setAttribute('aria-current',section.id===activeSectionId?'page':'false');
+    button.addEventListener('click',()=>selectSection(section.id));spine.appendChild(button);
+  });
+  organizeButton.disabled=interactionBusy()||!confirmedProduct;
+  requestAnimationFrame(()=>spine.querySelector('.is-active')?.scrollIntoView({block:'nearest',inline:'nearest'}));
+}
+function makeButton(label,handler,className=''){const button=document.createElement('button');button.type='button';button.textContent=label;button.className=className;button.addEventListener('click',handler);return button}
+function renderLinkedBlocks(container,section){
+  const list=document.createElement('ul');list.className='section-links__list';
+  if(!section.blocks.length){const empty=document.createElement('li');empty.className='empty-list';empty.textContent='Nenhum bloco vinculado.';list.appendChild(empty)}
+  section.blocks.forEach(block=>{
+    const item=document.createElement('li');item.className='section-links__item';
+    const link=document.createElement('a');link.href=focusedHref('/workspace/'+encodeURIComponent(caseRef)+'?block='+block.block_id);link.dataset.deskNavigation='';link.textContent=block.title;link.addEventListener('click',guardedLinkClick);
+    const meta=document.createElement('span');meta.className='section-links__meta'+(block.availability==='discarded'?' is-discarded':'');meta.textContent=block.availability==='discarded'?'DESCARTADO':'ATIVO';
+    item.append(link,meta);list.appendChild(item);
+  });container.appendChild(list);
+}
+function renderEditor(){
+  deskBody.replaceChildren();
+  if(!confirmedProduct){const box=document.createElement('div');box.className='product-empty';box.innerHTML='<p>Nenhum Produto foi selecionado. Os blocos do Workspace continuam disponíveis abaixo.</p>';box.appendChild(makeButton('Criar primeiro Produto',()=>newProductDialog.showModal(),'product-desk__primary'));deskBody.appendChild(box);return}
+  const section=sectionById(activeSectionId);
+  if(!section){const box=document.createElement('div');box.className='product-empty';box.innerHTML='<p>Este Produto ainda não possui Seções.</p>';box.appendChild(makeButton('Adicionar primeira seção',openOrganizer,'product-desk__primary'));deskBody.appendChild(box);return}
+  const draft=sectionDrafts.get(section.id)||{title:section.title,body:section.body,version:0,conflict:null};
+  const editor=document.createElement('section');editor.className='section-editor';
+  const head=document.createElement('div');head.className='section-editor__head';
+  const label=document.createElement('label');label.innerHTML='<span class="product-desk__label">Título da seção</span>';
+  const title=document.createElement('input');title.className='section-editor__title';title.maxLength=256;title.value=draft.title;title.id='section-title-input';label.appendChild(title);
+  const save=makeButton('Salvar seção',()=>saveSection(section.id),'product-desk__primary');save.dataset.mutationAction='';
+  const status=document.createElement('div');status.className='section-editor__status';status.id='section-save-status';
+  head.append(label,save,status);editor.appendChild(head);
+  if(draft.conflict){const conflict=document.createElement('div');conflict.className='conflict-box';conflict.textContent='Conflito: a versão do servidor mudou. Compare abaixo, edite a conciliação e clique novamente em Salvar seção, ou adote expressamente o servidor.';const server=document.createElement('pre');server.textContent='Servidor — '+draft.conflict.title+'\n\n'+draft.conflict.body;conflict.append(server,makeButton('Adotar versão do servidor',()=>{sectionDrafts.delete(section.id);renderEditor();updateBeforeUnload()}));editor.appendChild(conflict)}
+  const body=document.createElement('textarea');body.className='section-editor__body';body.id='section-body-input';body.maxLength=50000;body.value=draft.body;body.placeholder='Escreva o texto desta Seção…';
+  const counter=document.createElement('div');counter.className='section-editor__counter';counter.textContent=draft.body.length+' / 50000';
+  const onInput=()=>{const previous=sectionDrafts.get(section.id)||{title:section.title,body:section.body,version:0,conflict:null};const next={...previous,title:title.value,body:body.value,version:previous.version+1};sectionDrafts.set(section.id,next);counter.textContent=body.value.length+' / 50000';renderSectionStatus(status,section.id);updateBeforeUnload()};
+  title.addEventListener('input',onInput);body.addEventListener('input',onInput);editor.append(body,counter);
+  const links=document.createElement('section');links.className='section-links';const linksHead=document.createElement('div');linksHead.className='section-links__head';const linksTitle=document.createElement('div');linksTitle.className='section-links__title';linksTitle.textContent='Blocos vinculados';const adjust=makeButton('Ajustar vínculos',()=>openLinks(section.id));linksHead.append(linksTitle,adjust);links.appendChild(linksHead);renderLinkedBlocks(links,section);editor.appendChild(links);deskBody.appendChild(editor);renderSectionStatus(status,section.id);
+}
+function renderSectionStatus(element,id){const draft=sectionDrafts.get(id);element.className='section-editor__status';if(draft?.conflict){element.textContent='Conflito — rascunho local preservado';element.classList.add('is-error')}else if(sectionIsDirty(id)){element.textContent='Alterações não salvas';element.classList.add('is-dirty')}else{element.textContent=sectionById(id)?.body?'Salvo':'Salvo · sem texto';element.classList.add('is-saved')}}
+function renderAll(){renderProductSelect();renderSpine();renderEditor();renderInteractionState();updateBeforeUnload();focusUrl(activeProductId,activeSectionId)}
+
+async function loadProducts({preferredProduct=null,message=''}={}){
+  const sequence=++readSequence;
+  try{
+    const payload=await requestJson(productApi);
+    if(sequence!==readSequence)return;
+    products=payload.products||[];
+    const candidates=[preferredProduct,urlId('product'),Number(safeStorageGet(focusProductKey)),products[0]?.id];
+    const selected=candidates.find(id=>products.some(item=>item.id===Number(id)));
+    if(!selected){confirmedProduct=null;activeProductId=null;activeSectionId=null;renderAll();setDeskFeedback(message||'Nenhum Produto neste Workspace. Crie o primeiro quando quiser.');return}
+    await loadProduct(Number(selected),{message});
+  }catch(error){if(sequence!==readSequence)return;if(!confirmedProduct){activeProductId=null;activeSectionId=null;renderAll()}setDeskFeedback(error.message,'error')}
+}
+async function loadProduct(productId,{message='',preferredSection=null}={}){
+  const targetProductId=Number(productId);const sequence=++readSequence;
+  const origin={productId:activeProductId,sectionId:activeSectionId};
+  const switching=origin.productId!==null&&origin.productId!==targetProductId;
+  const transition={sequence,targetProductId,origin};
+  if(switching){productTransition=transition;renderInteractionState()}
+  setDeskFeedback('Carregando Produto…');
+  try{
+    const product=await requestJson(productApi+'/'+targetProductId);
+    if(sequence!==readSequence||switching&&productTransition!==transition)return false;
+    if(switching&&activeProductId!==origin.productId)return false;
+    const applied=applyProduct(product,{preferredSection,replaceContext:switching});
+    if(applied)setDeskFeedback(message||('Produto carregado · revisão '+product.revision),'success');
+    return applied;
+  }catch(error){
+    if(sequence!==readSequence||switching&&productTransition!==transition)return false;
+    productSelect.value=origin.productId?String(origin.productId):'';
+    focusUrl(origin.productId,origin.sectionId);setDeskFeedback(error.message,'error');return false;
+  }finally{
+    if(productTransition===transition){productTransition=null;renderInteractionState()}
+  }
+}
+async function selectProduct(productId){
+  if(Number(productId)===activeProductId)return;
+  const allowed=await workspaceDeskGuard.canContinue();
+  if(!allowed){productSelect.value=activeProductId?String(activeProductId):'';return}
+  await loadProduct(Number(productId));
+}
+async function selectSection(sectionId){
+  if(Number(sectionId)===activeSectionId)return;
+  const allowed=await workspaceDeskGuard.canContinue();if(!allowed)return;
+  activeSectionId=Number(sectionId);renderAll();
+}
+
+function productContextMatches(productId){return activeProductId===productId&&confirmedProduct?.id===productId}
+async function reconcileConflict(error,productId,sectionId=null){
+  if(error.status!==409)return false;
+  try{const server=await requestJson(productApi+'/'+productId);if(!productContextMatches(productId))return true;applyProduct(server);if(orderDraft){const serverIds=server.sections.map(item=>item.id);const merged=[...orderDraft.ids.filter(id=>serverIds.includes(id)),...serverIds.filter(id=>!orderDraft.ids.includes(id))];orderDraft={ids:merged,version:orderDraft.version+1}}if(sectionId){const draft=sectionDrafts.get(sectionId);const serverSection=sectionById(sectionId,server);if(draft&&serverSection)draft.conflict={title:serverSection.title,body:serverSection.body,revision:server.revision}}renderAll();setDeskFeedback('Conflito de revisão. O servidor foi relido e o rascunho local permanece disponível para conciliação humana.','warning')}
+  catch(readError){setDeskFeedback('Conflito de revisão. Não foi possível reler o servidor; o rascunho local foi preservado. '+readError.message,'error')}
+  return true;
+}
+async function refreshAfterUncertain(error,productId){if(!error.uncertain)return;try{const server=await requestJson(productApi+'/'+productId);if(!productContextMatches(productId))return;applyProduct(server);setDeskFeedback('Resultado incerto: o servidor foi relido, sem assumir que a mutação foi confirmada. Revise o rascunho.','warning')}catch(_){}}
+async function saveSection(sectionId){
+  const section=sectionById(sectionId);const draft=sectionDrafts.get(sectionId);if(!section||!draft||!sectionIsDirty(sectionId))return true;
+  const title=draft.title.trim();if(!title){setDeskFeedback('O título da Seção é obrigatório.','error');return false}if(draft.title.length>256||draft.body.length>50000){setDeskFeedback('Revise os limites: título 256 e corpo 50.000 caracteres.','error');return false}
+  const capture={productId:activeProductId,sectionId,title,body:draft.body,version:draft.version};
+  return await enqueueMutation(async()=>{try{if(!productContextMatches(capture.productId))return false;const product=await requestJson(productApi+'/'+capture.productId+'/sections/'+capture.sectionId,{method:'PATCH',body:JSON.stringify({title:capture.title,body:capture.body,expected_revision:confirmedProduct.revision})});if(!productContextMatches(capture.productId))return false;const latest=sectionDrafts.get(capture.sectionId);if(latest&&latest.version===capture.version&&latest.title.trim()===capture.title&&latest.body===capture.body)sectionDrafts.delete(capture.sectionId);applyProduct(product);setDeskFeedback(sectionIsDirty(capture.sectionId)?'Versão enviada confirmada; há digitação posterior ainda não salva.':'Seção salva · revisão '+product.revision,sectionIsDirty(capture.sectionId)?'warning':'success');return !sectionIsDirty(capture.sectionId)}catch(error){if(!(await reconcileConflict(error,capture.productId,capture.sectionId))){await refreshAfterUncertain(error,capture.productId);setDeskFeedback(error.message,'error')}return false}})
+}
+async function saveOrder(){
+  if(!orderIsDirty())return true;const capture={productId:activeProductId,ids:[...orderDraft.ids],version:orderDraft.version};
+  return await enqueueMutation(async()=>{try{if(!productContextMatches(capture.productId))return false;const product=await requestJson(productApi+'/'+capture.productId+'/sections/order',{method:'PUT',body:JSON.stringify({section_ids:capture.ids,expected_revision:confirmedProduct.revision})});if(!productContextMatches(capture.productId))return false;if(orderDraft?.version===capture.version&&arraysEqual(orderDraft.ids,capture.ids))orderDraft=null;applyProduct(product);setDeskFeedback(orderIsDirty()?'Ordem enviada; há alteração posterior ainda não aplicada.':'Ordem das Seções aplicada.','success');return !orderIsDirty()}catch(error){if(!(await reconcileConflict(error,capture.productId))){await refreshAfterUncertain(error,capture.productId);setDeskFeedback(error.message,'error')}return false}})
+}
+async function saveLinks(sectionId){
+  if(!linksAreDirty(sectionId))return true;const draft=linkDrafts.get(sectionId);const capture={productId:activeProductId,sectionId,ids:[...draft.ids],version:draft.version};
+  return await enqueueMutation(async()=>{try{if(!productContextMatches(capture.productId))return false;const product=await requestJson(productApi+'/'+capture.productId+'/sections/'+capture.sectionId+'/blocks',{method:'PUT',body:JSON.stringify({block_ids:capture.ids,expected_revision:confirmedProduct.revision})});if(!productContextMatches(capture.productId))return false;const latest=linkDrafts.get(capture.sectionId);if(latest?.version===capture.version&&arraysEqual(latest.ids,capture.ids))linkDrafts.delete(capture.sectionId);applyProduct(product);setDeskFeedback(linksAreDirty(capture.sectionId)?'Vínculos enviados; há alteração posterior ainda não aplicada.':'Vínculos aplicados.','success');return !linksAreDirty(capture.sectionId)}catch(error){if(!(await reconcileConflict(error,capture.productId))){await refreshAfterUncertain(error,capture.productId);setDeskFeedback(error.message,'error')}return false}})
+}
+async function saveAllPending(){
+  let confirmed=0;
+  const sectionIds=[...sectionDrafts.keys()].filter(sectionIsDirty);for(const id of sectionIds){if(!(await saveSection(id)))return {ok:false,confirmed,remaining:hasPendingChanges()};confirmed+=1}
+  if(orderIsDirty()){if(!(await saveOrder()))return {ok:false,confirmed,remaining:hasPendingChanges()};confirmed+=1}
+  const linkIds=[...linkDrafts.keys()].filter(linksAreDirty);for(const id of linkIds){if(!(await saveLinks(id)))return {ok:false,confirmed,remaining:hasPendingChanges()};confirmed+=1}
+  return {ok:!hasPendingChanges(),confirmed,remaining:hasPendingChanges()};
+}
+function discardAllPending(){sectionDrafts.clear();orderDraft=null;linkDrafts.clear();renderAll();setDeskFeedback('Alterações locais descartadas.','warning')}
+
+function renderOrganizer(){
+  organizerList.replaceChildren();const ids=currentOrder();ids.forEach((id,index)=>{const section=sectionById(id);if(!section)return;const item=document.createElement('li');item.className='organizer-item';const name=document.createElement('span');name.className='organizer-item__name';name.textContent=section.title;const actions=document.createElement('span');actions.className='organizer-item__actions';const up=makeButton('↑',()=>moveSection(index,-1));up.title='Mover para cima';up.disabled=index===0;const down=makeButton('↓',()=>moveSection(index,1));down.title='Mover para baixo';down.disabled=index===ids.length-1;actions.append(up,down);item.append(name,actions);organizerList.appendChild(item)});applyOrderButton.disabled=!orderIsDirty()||mutationBusy;
+}
+function moveSection(index,delta){const ids=[...currentOrder()];const target=index+delta;if(target<0||target>=ids.length)return;[ids[index],ids[target]]=[ids[target],ids[index]];orderDraft={ids,version:(orderDraft?.version||0)+1};renderOrganizer();updateBeforeUnload()}
+function openOrganizer(){if(!confirmedProduct)return;setLocalFeedback(organizerFeedback,'');newSectionTitle.value='';renderOrganizer();organizerDialog.showModal()}
+function finishOrganizerClose(discard=false){if(discard)orderDraft=null;organizerClosing=true;if(organizerDialog.open)organizerDialog.close();organizerClosing=false;renderAll()}
+function requestOrganizerClose(){if(orderIsDirty()){if(!confirm('Descartar a ordem local ainda não aplicada?'))return;finishOrganizerClose(true);return}finishOrganizerClose(false)}
+async function createSection(){
+  const title=newSectionTitle.value.trim();if(!title){setLocalFeedback(organizerFeedback,'Informe o título da Seção.','error');return}if(title.length>256){setLocalFeedback(organizerFeedback,'O título aceita no máximo 256 caracteres.','error');return}
+  if(orderIsDirty()){setLocalFeedback(organizerFeedback,'Aplique ou cancele a ordem pendente antes de adicionar uma Seção.','warning');return}
+  const productId=activeProductId;const oldIds=new Set(confirmedProduct.sections.map(item=>item.id));addSectionButton.disabled=true;
+  try{const product=await enqueueMutation(async()=>{try{return await requestJson(productApi+'/'+productId+'/sections',{method:'POST',body:JSON.stringify({title,expected_revision:confirmedProduct.revision})})}catch(error){if(!(await reconcileConflict(error,productId))){await refreshAfterUncertain(error,productId);setLocalFeedback(organizerFeedback,error.message,'error')}return false}});if(!product||!productContextMatches(productId))return;const created=product.sections.find(item=>!oldIds.has(item.id));applyProduct(product,{preferredSection:created?.id});newSectionTitle.value='';renderAll();renderOrganizer();setLocalFeedback(organizerFeedback,'Seção adicionada ao final.','success')}finally{addSectionButton.disabled=false}
+}
+
+function allLinkCandidates(sectionId){
+  const persisted=sectionById(sectionId)?.blocks||[];const map=new Map(activeBlocks.map(item=>[item.id,{id:item.id,title:item.title,availability:'available'}]));persisted.forEach(item=>map.set(item.block_id,{id:item.block_id,title:item.title,availability:item.availability}));return map;
+}
+function renderLinks(sectionId){
+  linkPickerList.replaceChildren();const ids=currentLinks(sectionId);const candidates=allLinkCandidates(sectionId);const ordered=[...ids,...[...candidates.keys()].filter(id=>!ids.includes(id))];
+  ordered.forEach(id=>{const block=candidates.get(id);const selected=ids.includes(id);const item=document.createElement('li');item.className='link-picker-item';const check=document.createElement('input');check.type='checkbox';check.checked=selected;check.disabled=block.availability==='discarded'&&!selected;check.setAttribute('aria-label','Vincular '+block.title);check.addEventListener('change',()=>toggleLink(sectionId,id,check.checked));const name=document.createElement('span');name.className='link-picker-item__name';name.textContent=block.title+(block.availability==='discarded'?' · Descartado':'');const actions=document.createElement('span');actions.className='link-picker-item__actions';const index=ids.indexOf(id);const up=makeButton('↑',()=>moveLink(sectionId,index,-1));up.disabled=!selected||index===0;up.title='Mover vínculo para cima';const down=makeButton('↓',()=>moveLink(sectionId,index,1));down.disabled=!selected||index===ids.length-1;down.title='Mover vínculo para baixo';actions.append(up,down);item.append(check,name,actions);linkPickerList.appendChild(item)});
+}
+function setLinkDraft(sectionId,ids){linkDrafts.set(sectionId,{ids,version:(linkDrafts.get(sectionId)?.version||0)+1});renderLinks(sectionId);updateBeforeUnload()}
+function toggleLink(sectionId,id,selected){const ids=[...currentLinks(sectionId)];if(selected&&!ids.includes(id))ids.push(id);if(!selected&&ids.includes(id))ids.splice(ids.indexOf(id),1);setLinkDraft(sectionId,ids)}
+function moveLink(sectionId,index,delta){const ids=[...currentLinks(sectionId)];const target=index+delta;if(index<0||target<0||target>=ids.length)return;[ids[index],ids[target]]=[ids[target],ids[index]];setLinkDraft(sectionId,ids)}
+function openLinks(sectionId){linksDialog.dataset.sectionId=sectionId;if(!linkDrafts.has(sectionId))linkDrafts.set(sectionId,{ids:[...persistedLinks(sectionId)],version:0});setLocalFeedback(linkFeedback,'');renderLinks(sectionId);linksDialog.showModal()}
+function finishLinksClose(discard=false){const id=Number(linksDialog.dataset.sectionId);if(discard||!linksAreDirty(id))linkDrafts.delete(id);linksClosing=true;if(linksDialog.open)linksDialog.close();linksClosing=false;renderAll()}
+function requestLinksClose(){const id=Number(linksDialog.dataset.sectionId);if(linksAreDirty(id)){if(!confirm('Descartar os vínculos locais ainda não aplicados?'))return;finishLinksClose(true);return}finishLinksClose(false)}
+
+const workspaceDeskGuard={
+  async canContinue(){
+    if(interactionBusy()){setDeskFeedback('Aguarde a confirmação da operação em andamento antes de navegar.','warning');return false}
+    if(!hasPendingChanges())return true;
+    if(guardDecision)return false;
+    setLocalFeedback(pendingFeedback,'');pendingDialog.showModal();
+    return new Promise(resolve=>{guardDecision={resolve,resolved:false,saving:false,stayRequested:false}});
+  },
+  async run(action){if(await this.canContinue())return action();return false}
+};
+window.workspaceDeskGuard=workspaceDeskGuard;
+const stayButton=document.getElementById('stay-button');
+const discardPendingButton=document.getElementById('discard-pending-button');
+const savePendingButton=document.getElementById('save-pending-button');
+function setGuardSaving(saving){stayButton.disabled=false;discardPendingButton.disabled=saving;savePendingButton.disabled=saving;savePendingButton.setAttribute('aria-busy',String(saving))}
+function settleGuard(value){
+  const decision=guardDecision;if(!decision||decision.resolved)return false;
+  decision.resolved=true;guardDecision=null;guardClosing=true;if(pendingDialog.open)pendingDialog.close();guardClosing=false;setGuardSaving(false);decision.resolve(Boolean(value));return true;
+}
+function stayInWorkspace(){
+  if(!guardDecision)return;
+  if(guardDecision.saving){guardDecision.stayRequested=true;stayButton.disabled=true;setLocalFeedback(pendingFeedback,'A navegação será cancelada quando a gravação já enviada terminar. A requisição em andamento não pode ser cancelada com segurança.','warning');return}
+  settleGuard(false);
+}
+stayButton.addEventListener('click',stayInWorkspace);
+discardPendingButton.addEventListener('click',()=>{if(!guardDecision||guardDecision.saving){setLocalFeedback(pendingFeedback,'Aguarde a gravação já enviada terminar; descartar agora não libera a navegação.','warning');return}discardAllPending();settleGuard(true)});
+savePendingButton.addEventListener('click',async()=>{
+  const decision=guardDecision;if(!decision||decision.saving)return;
+  decision.saving=true;setGuardSaving(true);setLocalFeedback(pendingFeedback,'Salvando operações pendentes em sequência…');
+  const result=await saveAllPending();
+  if(!guardDecision||guardDecision!==decision||decision.resolved)return;
+  decision.saving=false;setGuardSaving(false);
+  if(decision.stayRequested){settleGuard(false);return}
+  if(result.ok&&!hasPendingChanges()){settleGuard(true);return}
+  setDeskFeedback((result.confirmed?result.confirmed+' operação(ões) confirmada(s); ':'')+'há alterações ainda não confirmadas. A navegação foi cancelada.','warning');
+  settleGuard(false);
+});
+pendingDialog.addEventListener('cancel',event=>{event.preventDefault();stayInWorkspace()});
+pendingDialog.addEventListener('close',()=>{if(guardClosing||!guardDecision)return;if(guardDecision.saving){guardDecision.stayRequested=true;queueMicrotask(()=>{if(guardDecision&&!pendingDialog.open)pendingDialog.showModal()});return}settleGuard(false)});
+
+async function guardedLinkClick(event){
+  if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
+  event.preventDefault();const href=focusedHref(event.currentTarget.href);await workspaceDeskGuard.run(()=>{preserveWorkScroll(event.currentTarget);window.location.assign(href)});
+}
+document.querySelectorAll('[data-desk-navigation]').forEach(link=>link.addEventListener('click',guardedLinkClick));
+async function submitLegacyForm(form,submitter){
+  const focus={productId:activeProductId,sectionId:activeSectionId};
+  let formData;try{formData=new FormData(form,submitter||undefined)}catch(_){formData=new FormData(form);if(submitter?.name)formData.append(submitter.name,submitter.value)}
+  const controls=Array.from(form.elements||[]);const disabledBefore=controls.map(control=>control.disabled);controls.forEach(control=>{control.disabled=true});
+  setBlockSelectionLocked(true);
+  legacyNavigationBusy=true;renderInteractionState();setDeskFeedback('Executando operação do bloco sem perder o foco da Mesa…');
+  try{
+    const response=await fetch(form.action,{method:(form.method||'POST').toUpperCase(),body:formData,headers:{'Accept':'text/html,application/json'},redirect:'follow'});
+    const finalUrl=new URL(response.url||form.action,window.location.href);
+    if(response.redirected&&finalUrl.pathname.includes('/login'))throw new DeskRequestError('A sessão expirou. Os dados do formulário e o foco da Mesa foram preservados.',{auth:true});
+    if(!response.ok){let message='A operação do bloco falhou (HTTP '+response.status+').';try{const payload=await response.json();if(payload?.error)message=payload.error}catch(_){}throw new DeskRequestError(message,{status:response.status})}
+    if(!finalUrl.pathname.startsWith('/workspace/'))throw new DeskRequestError('A operação não confirmou retorno ao Workspace; nenhuma navegação foi feita.',{uncertain:true});
+    if(hasPendingChanges()){setDeskFeedback('A operação do bloco foi confirmada, mas surgiu edição local durante a espera. Salve ou descarte antes de recarregar.','warning');return false}
+    window.location.assign(focusedHref(finalUrl.href,focus.productId,focus.sectionId));return true;
+  }catch(error){setDeskFeedback(error?.message||'Falha ao executar a operação do bloco. O formulário foi preservado.','error');return false}
+  finally{controls.forEach((control,index)=>{control.disabled=disabledBefore[index]});setBlockSelectionLocked(false);legacyNavigationBusy=false;renderInteractionState()}
+}
+document.addEventListener('submit',async event=>{
+  const form=event.target.closest?.('[data-desk-reload-action]');if(!form)return;
+  if(event.defaultPrevented)return;
+  event.preventDefault();const message=form.dataset.confirmMessage;if(message&&!confirm(message))return;
+  const allowed=await workspaceDeskGuard.canContinue();if(!allowed)return;
+  await submitLegacyForm(form,event.submitter);
+});
+
+function finishNewProductClose(){if(createProductBusy){setLocalFeedback(newProductFeedback,'A criação já foi enviada. Aguarde a resposta antes de fechar.','warning');return false}newProductClosing=true;if(newProductDialog.open)newProductDialog.close();newProductClosing=false;return true}
+async function refreshProductInventoryOnly(operation){
+  try{const payload=await requestJson(productApi);if(createProductOperation!==operation)return;products=payload.products||[];renderProductSelect();setLocalFeedback(newProductFeedback,'Resultado incerto: a lista foi relida. Confira os Produtos antes de tentar novamente.','warning')}
+  catch(error){if(createProductOperation===operation)setLocalFeedback(newProductFeedback,'Resultado incerto e não foi possível reler a lista. '+error.message,'error')}
+}
+newProductButton.addEventListener('click',async()=>{if(!(await workspaceDeskGuard.canContinue()))return;newProductTitle.value='';setLocalFeedback(newProductFeedback,'');newProductDialog.showModal();newProductTitle.focus()});
+cancelNewProductButton.addEventListener('click',()=>finishNewProductClose());
+newProductDialog.addEventListener('cancel',event=>{event.preventDefault();finishNewProductClose()});
+newProductDialog.addEventListener('close',()=>{if(newProductClosing)return;if(createProductBusy){queueMicrotask(()=>{if(createProductBusy&&!newProductDialog.open)newProductDialog.showModal()})}});
+newProductForm.addEventListener('submit',async event=>{
+  event.preventDefault();const title=newProductTitle.value.trim();if(!title){setLocalFeedback(newProductFeedback,'Informe o título do Produto.','error');return}if(title.length>256){setLocalFeedback(newProductFeedback,'O título aceita no máximo 256 caracteres.','error');return}
+  if(createProductBusy)return;
+  const operation={originProductId:activeProductId,originSectionId:activeSectionId,title};createProductOperation=operation;createProductBusy=true;confirmNewProductButton.disabled=true;cancelNewProductButton.disabled=true;renderInteractionState();
+  try{
+    const product=await requestJson(productApi,{method:'POST',body:JSON.stringify({title,section_titles:[]})});
+    if(createProductOperation!==operation)return;
+    if(!products.some(item=>item.id===product.id))products.push({id:product.id,title:product.title,revision:product.revision,section_count:0});
+    if(activeProductId!==operation.originProductId||activeSectionId!==operation.originSectionId||hasPendingChanges()){setLocalFeedback(newProductFeedback,'Produto criado, mas o contexto da Mesa mudou. A seleção atual foi preservada.','warning');renderProductSelect();return}
+    applyProduct(product,{replaceContext:true});createProductBusy=false;finishNewProductClose();setDeskFeedback('Produto criado. Adicione a primeira Seção.','success');
+  }catch(error){if(createProductOperation!==operation)return;setLocalFeedback(newProductFeedback,error.uncertain?'Resultado incerto. A lista será relida; confira se o Produto foi criado antes de tentar novamente.':error.message,'error');if(error.uncertain)await refreshProductInventoryOnly(operation)}
+  finally{if(createProductOperation===operation){createProductOperation=null;createProductBusy=false;confirmNewProductButton.disabled=false;cancelNewProductButton.disabled=false;renderInteractionState()}}
+});
+productSelect.addEventListener('change',()=>selectProduct(productSelect.value));
+organizeButton.addEventListener('click',openOrganizer);cancelOrganizerButton.addEventListener('click',requestOrganizerClose);addSectionButton.addEventListener('click',createSection);
+organizerDialog.addEventListener('cancel',event=>{event.preventDefault();requestOrganizerClose()});
+organizerDialog.addEventListener('close',()=>{if(organizerClosing)return;if(orderIsDirty())queueMicrotask(()=>{if(orderIsDirty()&&!organizerDialog.open){organizerDialog.showModal();requestOrganizerClose()}})});
+applyOrderButton.addEventListener('click',async()=>{if(await saveOrder())finishOrganizerClose(false)});
+cancelLinksButton.addEventListener('click',requestLinksClose);linksDialog.addEventListener('cancel',event=>{event.preventDefault();requestLinksClose()});
+linksDialog.addEventListener('close',()=>{const id=Number(linksDialog.dataset.sectionId);if(linksClosing)return;if(linksAreDirty(id))queueMicrotask(()=>{if(linksAreDirty(id)&&!linksDialog.open){linksDialog.showModal();requestLinksClose()}})});
+applyLinksButton.addEventListener('click',async()=>{const id=Number(linksDialog.dataset.sectionId);if(await saveLinks(id))finishLinksClose(false)});
+window.addEventListener('popstate',async()=>{const targetProduct=urlId('product');const targetSection=urlId('section');if(!(await workspaceDeskGuard.canContinue())){focusUrl(activeProductId,activeSectionId);return}if(targetProduct&&targetProduct!==activeProductId)await loadProduct(targetProduct);else if(targetSection&&sectionById(targetSection)){activeSectionId=targetSection;renderAll()}});
+
+loadProducts().finally(restoreWorkScrollAfterRender);

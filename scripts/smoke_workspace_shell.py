@@ -3,6 +3,9 @@ from pathlib import Path
 template = Path("app/templates/workspace.html").read_text(
     encoding="utf-8-sig"
 )
+template += Path(
+    "app/templates/partials/workspace_product_desk.html"
+).read_text(encoding="utf-8-sig")
 
 required = {
     "ux01-base": "UX01_SHELL_V1",

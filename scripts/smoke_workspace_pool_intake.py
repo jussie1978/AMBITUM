@@ -135,7 +135,9 @@ presentation_start = (
 )
 assert request_start in incorporate
 assert presentation_start in incorporate
-assert incorporate.index(request_start) < incorporate.index("await ")
+guard = "await workspaceDeskGuard.canContinue()"
+assert guard in incorporate
+assert incorporate.index(guard) < incorporate.index(request_start)
 assert incorporate.index(request_start) < incorporate.index(
     presentation_start
 )
