@@ -1,14 +1,14 @@
 # ADR-AMBITUM-PR-001 — Product Reset: Pool-First, Knowledge-Grounded e Relatório Rastreável
 
-**Versão:** 1.0  
-**Data:** 28/09/2026  
-**Status:** ACEITA  
-**Projeto:** CIRCE AMBITUM  
-**Substitui como direção de produto:** sequência UX-03B → UX-04 → UX-05 como prioridade automática  
+**Versão:** 1.0
+**Data:** 28/09/2026
+**Status:** ACEITA
+**Projeto:** CIRCE AMBITUM
+**Substitui como direção de produto:** sequência UX-03B → UX-04 → UX-05 como prioridade automática
 **Preserva:** Intake/Storage canônico, Pool, Original, auditoria, autenticação, Design System e fundações técnicas já validadas
 
-**Repositório canônico:** `https://github.com/jussie1978/AMBITUM`  
-**Fonte da verdade:** `origin/main` do repositório canônico  
+**Repositório canônico:** `https://github.com/jussie1978/AMBITUM`
+**Fonte da verdade:** `origin/main` do repositório canônico
 **Nome legado:** CIRCE-ATHENA, preservado apenas em histórico anterior a 28/09/2026
 
 ## 1. Contexto

@@ -1,10 +1,10 @@
 # SPEC-AMBITUM — IMPLEMENTATION MASTER v2.0
 
-**Data:** 28/09/2026  
-**Status:** READY  
-**Direção:** Product Reset  
-**Próxima unidade:** PR-01 — Audit & Freeze  
-**Repositório canônico:** `https://github.com/jussie1978/AMBITUM`  
+**Data:** 28/09/2026
+**Status:** READY
+**Direção:** Product Reset
+**Próxima unidade:** PR-01 — Audit & Freeze
+**Repositório canônico:** `https://github.com/jussie1978/AMBITUM`
 **Regra de sincronização:** `origin/main` é a fonte da verdade; local e remoto devem terminar cada unidade em 0/0.
 
 ## 1. Objetivo de implementação

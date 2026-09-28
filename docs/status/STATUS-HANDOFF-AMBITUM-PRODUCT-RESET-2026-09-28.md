@@ -1,11 +1,11 @@
 # STATUS / HANDOFF — CIRCE AMBITUM Product Reset
 
-**Data:** 28/09/2026  
-**Estado:** DIREÇÃO DE PRODUTO REDEFINIDA  
-**Próxima unidade:** PR-01 — Audit & Freeze  
-**Implementação nova nesta sessão:** nenhuma  
-**Nome canônico:** CIRCE AMBITUM  
-**Nome legado:** CIRCE-ATHENA  
+**Data:** 28/09/2026
+**Estado:** DIREÇÃO DE PRODUTO REDEFINIDA
+**Próxima unidade:** PR-01 — Audit & Freeze
+**Implementação nova nesta sessão:** nenhuma
+**Nome canônico:** CIRCE AMBITUM
+**Nome legado:** CIRCE-ATHENA
 **Repositório canônico:** `https://github.com/jussie1978/AMBITUM`
 
 ## 1. Decisão

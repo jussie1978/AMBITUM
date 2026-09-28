@@ -1,14 +1,14 @@
 # CIRCE AMBITUM — PROJECT MASTER
 
-**Versão:** 2.0  
-**Data:** 28/09/2026  
-**Status:** PRODUCT RESET APROVADO  
-**Substitui:** Project Master v1.4 como autoridade corrente de produto  
+**Versão:** 2.0
+**Data:** 28/09/2026
+**Status:** PRODUCT RESET APROVADO
+**Substitui:** Project Master v1.4 como autoridade corrente de produto
 **Preserva como histórico:** roadmap e decisões anteriores não conflitantes
 
-**Nome canônico:** CIRCE AMBITUM  
-**Nome legado:** CIRCE-ATHENA (até 28/09/2026)  
-**Repositório canônico:** `https://github.com/jussie1978/AMBITUM`  
+**Nome canônico:** CIRCE AMBITUM
+**Nome legado:** CIRCE-ATHENA (até 28/09/2026)
+**Repositório canônico:** `https://github.com/jussie1978/AMBITUM`
 **Fonte da verdade:** `origin/main`; clones locais devem encerrar cada unidade sincronizados com o remoto.
 
 ## 1. Identidade

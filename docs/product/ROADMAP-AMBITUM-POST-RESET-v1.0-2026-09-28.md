@@ -1,9 +1,9 @@
 # ROADMAP — CIRCE AMBITUM Pós-Reset
 
-**Versão:** 1.0  
-**Data:** 28/09/2026  
-**Autoridade:** ADR-AMBITUM-PR-001  
-**Repositório canônico:** `https://github.com/jussie1978/AMBITUM`  
+**Versão:** 1.0
+**Data:** 28/09/2026
+**Autoridade:** ADR-AMBITUM-PR-001
+**Repositório canônico:** `https://github.com/jussie1978/AMBITUM`
 **Fonte da verdade:** `origin/main`
 
 ## Estado anterior

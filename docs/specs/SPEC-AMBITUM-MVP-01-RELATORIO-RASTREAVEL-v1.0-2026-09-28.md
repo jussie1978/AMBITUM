@@ -1,9 +1,9 @@
 # SPEC-AMBITUM-MVP-01 — Pool Inteligente e Relatório Rastreável
 
-**Versão:** 1.0  
-**Data:** 28/09/2026  
-**Estado:** READY  
-**Origem:** ADR-AMBITUM-PR-001  
+**Versão:** 1.0
+**Data:** 28/09/2026
+**Estado:** READY
+**Origem:** ADR-AMBITUM-PR-001
 **Objetivo:** provar um fluxo vertical de baixo atrito do material bruto até uma minuta de relatório rastreável.
 
 ## 1. Pergunta de produto
