@@ -8,6 +8,7 @@ from app.models.operator import Operator, AuditLog, SyncQueue, AssistantExecutio
 from app.models.photo import Photo
 from app.models.platea import SharedCase, SharedPerson, SharedDocument, SharedLink, SharedCaseAnnotation, PlateaAccessLog
 from app.models.workspace_product import WorkspaceProduct, ProductSection, ProductSectionBlock
+from app.models.smart_metadata import AssetSmartMetadata
 from app.middleware.auth_guard import AuthGuard
 from app.routes.auth import router as auth_router
 from app.routes.web import router as web_router
@@ -17,6 +18,7 @@ from app.routes.platea import router as platea_router
 from app.routes.workspace import router as workspace_router
 from app.routes.documents import router as documents_router
 from app.routes.workspace_products import router as workspace_products_router
+from app.routes.smart_metadata import router as smart_metadata_router
 
 # Evolução de schema é responsabilidade do Alembic.
 # Antes de iniciar uma versão nova da aplicação, execute: alembic upgrade head
@@ -32,6 +34,7 @@ app.include_router(platea_router)
 app.include_router(workspace_router)
 app.include_router(documents_router)
 app.include_router(workspace_products_router)
+app.include_router(smart_metadata_router)
 
 if __name__ == "__main__":
     print("=" * 52)

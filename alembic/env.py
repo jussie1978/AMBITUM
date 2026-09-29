@@ -17,6 +17,7 @@ import app.models.photo      # noqa: F401
 import app.models.platea     # noqa: F401
 import app.models.workspace  # noqa: F401
 import app.models.workspace_product  # noqa: F401
+import app.models.smart_metadata  # noqa: F401
 
 config = context.config
 

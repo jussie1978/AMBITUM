@@ -9,6 +9,7 @@ from app.models.platea import SharedCase
 from app.models.workspace import InvestigativeBlock, InvestigativeWorkspace
 from app.services.audit_service import log_action
 from app.services.case_material_service import load_case_materials
+from app.services.smart_metadata_service import list_metadata
 from app.services.workspace_service import (
     create_block,
     discard_block,
@@ -88,6 +89,15 @@ async def workspace_detail(request: Request, case_ref: str, block: int | None = 
         documents = list(materials.documents)
         links = list(materials.links)
         annotations = list(materials.annotations)
+        smart_metadata = list_metadata(db, case_ref=case_ref)
+        smart_metadata_by_document: dict[int, list[dict]] = {}
+        smart_metadata_filter_values = {"target": set(), "topic": set(), "tag": set()}
+        for item in smart_metadata:
+            smart_metadata_by_document.setdefault(
+                item["shared_document_id"], []
+            ).append(item)
+            if item["kind"] in smart_metadata_filter_values:
+                smart_metadata_filter_values[item["kind"]].add(item["value_text"])
         blocks = list_blocks(db, workspace.id)
         active_block = next((item for item in blocks if item.id == block), None)
 
@@ -100,6 +110,11 @@ async def workspace_detail(request: Request, case_ref: str, block: int | None = 
             "documents": documents,
             "links": links,
             "annotations": annotations,
+            "smart_metadata_by_document": smart_metadata_by_document,
+            "smart_metadata_filter_values": {
+                kind: sorted(values, key=str.casefold)
+                for kind, values in smart_metadata_filter_values.items()
+            },
             "blocks": blocks,
             "active_block": active_block,
         })

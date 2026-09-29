@@ -795,6 +795,13 @@ body.workspace-resizing *{
 .workspace-page #pane-context .pool-inventory-selection-bar__actions{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .workspace-page #pane-context .pool-inventory-selection-bar button{height:28px;border:1px solid var(--border-subtle);border-radius:2px;background:transparent;color:var(--text-secondary);font:inherit;font-size:9px;cursor:pointer}
 .workspace-page #pane-context .pool-inventory-selection-bar button:disabled{opacity:.34;cursor:not-allowed}
+.workspace-page #pane-context .pool-smart-metadata{display:grid;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border-subtle)}
+.workspace-page #pane-context .pool-smart-metadata__fields{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:6px}
+.workspace-page #pane-context .pool-smart-metadata select,.workspace-page #pane-context .pool-smart-metadata input{min-width:0;height:28px;padding:0 6px;border:1px solid var(--border-subtle);border-radius:2px;background:var(--bg-elevated);color:var(--text-primary);font:inherit;font-size:9px}
+.workspace-page #pane-context .pool-smart-metadata__person{grid-column:1/-1}
+.workspace-page #pane-context .pool-smart-metadata__feedback{color:var(--text-tertiary);font-size:8px;line-height:1.35}
+.workspace-page #pane-context .pool-inventory-item__metadata{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px}
+.workspace-page #pane-context .pool-inventory-item__metadata span{padding:2px 4px;border:1px solid var(--border-subtle);border-radius:2px;color:var(--text-tertiary);font-family:var(--font-mono);font-size:7px}
 .workspace-page #pane-context .pool-inventory-family-empty,
 .workspace-page #pane-context .pool-inventory-empty{padding:11px 2px;color:var(--text-tertiary);font-size:10px}
 .workspace-page #pane-context [hidden]{display:none!important}
@@ -910,8 +917,35 @@ body.workspace-resizing *{
               <option value="metadata">Somente metadados</option>
             </select>
           </label>
+          <label class="pool-inventory-tool">
+            <span class="pool-inventory-tool-label">ALVO</span>
+            <select class="pool-inventory-filter pool-metadata-filter" id="pool-target-filter" data-metadata-kind="target">
+              <option value="all">Todos</option>
+              {% for value in smart_metadata_filter_values.target %}
+              <option value="{{ value }}">{{ value }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label class="pool-inventory-tool">
+            <span class="pool-inventory-tool-label">TEMA</span>
+            <select class="pool-inventory-filter pool-metadata-filter" id="pool-topic-filter" data-metadata-kind="topic">
+              <option value="all">Todos</option>
+              {% for value in smart_metadata_filter_values.topic %}
+              <option value="{{ value }}">{{ value }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label class="pool-inventory-tool">
+            <span class="pool-inventory-tool-label">TAG</span>
+            <select class="pool-inventory-filter pool-metadata-filter" id="pool-tag-filter" data-metadata-kind="tag">
+              <option value="all">Todos</option>
+              {% for value in smart_metadata_filter_values.tag %}
+              <option value="{{ value }}">{{ value }}</option>
+              {% endfor %}
+            </select>
+          </label>
         </div>
-        <button class="pool-inventory-selection-toggle" id="pool-selection-mode-toggle" type="button" aria-pressed="false">SELECIONAR PARA A MESA</button>
+        <button class="pool-inventory-selection-toggle" id="pool-selection-mode-toggle" type="button" aria-pressed="false">SELECIONAR MATERIAIS</button>
       </div>
 
       <!-- UX02B_POOL_INTAKE_START -->
@@ -939,7 +973,7 @@ body.workspace-resizing *{
         </div>
         {% for item in persons %}
         <div class="pool-inventory-item" data-material-family="person" data-search-text="{{ item.full_name }} {{ item.person_ref or '' }} {{ item.aliases or '' }} {{ item.cpf or '' }} {{ item.rg or '' }} {{ item.role_in_case or '' }} {{ item.reliability_level or '' }} {{ item.notes or '' }}">
-          <input class="pool-inventory-select" form="create-block-form" type="checkbox" name="sources" value="person:{{ item.id }}" aria-label="Selecionar pessoa {{ item.full_name }}">
+          <input class="pool-inventory-select" type="checkbox" data-source-token="person:{{ item.id }}" aria-label="Selecionar pessoa {{ item.full_name }}">
           <div class="pool-inventory-item__content">
             <span class="pool-inventory-item__primary">{{ item.full_name }}</span>
             <div class="pool-inventory-item__meta">{{ item.person_ref or item.cpf or item.rg or 'sem referencia externa' }}{% if item.role_in_case %} &middot; {{ item.role_in_case }}{% endif %}{% if item.reliability_level %} &middot; {{ item.reliability_level }}{% endif %}</div>
@@ -955,6 +989,7 @@ body.workspace-resizing *{
         </div>
         <div id="case-document-list">
           {% for item in documents %}
+          {% set item_metadata = smart_metadata_by_document.get(item.id, []) %}
           <div
             class="pool-inventory-item pool-inventory-item--document"
             data-material-family="document"
@@ -962,14 +997,16 @@ body.workspace-resizing *{
             data-storage-state="{{ item.storage_state }}"
             data-has-original="{{ 'true' if item.physical_available else 'false' }}"
             data-document-type="{{ item.file_type or item.mime_type or '' }}"
+            data-metadata-targets="{{ item_metadata | selectattr('kind', 'equalto', 'target') | map(attribute='value_text') | list | tojson | forceescape }}"
+            data-metadata-topics="{{ item_metadata | selectattr('kind', 'equalto', 'topic') | map(attribute='value_text') | list | tojson | forceescape }}"
+            data-metadata-tags="{{ item_metadata | selectattr('kind', 'equalto', 'tag') | map(attribute='value_text') | list | tojson | forceescape }}"
             data-search-text="{{ item.filename }} {{ item.document_ref or '' }} {{ item.file_type or '' }} {{ item.mime_type or '' }} {{ item.sha256 or '' }} {{ item.description or '' }} {{ item.imported_at or '' }} {{ item.storage_origin or '' }}"
           >
             <input
               class="pool-inventory-select"
-              form="create-block-form"
               type="checkbox"
-              name="sources"
-              value="document:{{ item.id }}"
+              data-source-token="document:{{ item.id }}"
+              data-document-id="{{ item.id }}"
               aria-label="Selecionar documento {{ item.filename }}"
             >
             <div class="pool-inventory-item__content">
@@ -979,6 +1016,13 @@ body.workspace-resizing *{
               <span class="pool-inventory-item__state pool-inventory-item__state--available document-state document-state--available">ORIGINAL DISPONIVEL</span>
               {% else %}
               <span class="pool-inventory-item__state document-state document-state--metadata">SOMENTE METADADOS</span>
+              {% endif %}
+              {% if item_metadata %}
+              <div class="pool-inventory-item__metadata">
+                {% for metadata in item_metadata %}
+                <span data-metadata-kind="{{ metadata.kind }}">{{ metadata.kind }}: {{ metadata.value_text }}</span>
+                {% endfor %}
+              </div>
               {% endif %}
             </div>
             {% if item.physical_available %}
@@ -1002,7 +1046,7 @@ body.workspace-resizing *{
         </div>
         {% for item in links %}
         <div class="pool-inventory-item" data-material-family="link" data-search-text="{{ item.entity_a_name or '' }} {{ item.entity_a_ref }} {{ item.entity_b_name or '' }} {{ item.entity_b_ref }} {{ item.link_type }} {{ item.link_nature or '' }} {{ item.notes or '' }}">
-          <input class="pool-inventory-select" form="create-block-form" type="checkbox" name="sources" value="link:{{ item.id }}" aria-label="Selecionar vinculo {{ item.id }}">
+          <input class="pool-inventory-select" type="checkbox" data-source-token="link:{{ item.id }}" aria-label="Selecionar vinculo {{ item.id }}">
           <div class="pool-inventory-item__content">
             <span class="pool-inventory-item__primary">{{ item.entity_a_name or item.entity_a_ref }} &rarr; {{ item.entity_b_name or item.entity_b_ref }}</span>
             <div class="pool-inventory-item__meta">{{ item.link_type }}{% if item.link_nature %} &middot; {{ item.link_nature }}{% endif %}</div>
@@ -1018,7 +1062,7 @@ body.workspace-resizing *{
         </div>
         {% for item in annotations %}
         <div class="pool-inventory-item" data-material-family="annotation" data-search-text="{{ item.content }} {{ item.created_by_username }} {{ item.source }} {{ item.created_at }}">
-          <input class="pool-inventory-select" form="create-block-form" type="checkbox" name="sources" value="annotation:{{ item.id }}" aria-label="Selecionar anotacao {{ item.id }}">
+          <input class="pool-inventory-select" type="checkbox" data-source-token="annotation:{{ item.id }}" aria-label="Selecionar anotacao {{ item.id }}">
           <div class="pool-inventory-item__content">
             <span class="pool-inventory-item__primary">{{ item.content[:120] }}{% if item.content|length > 120 %}&hellip;{% endif %}</span>
             <div class="pool-inventory-item__meta">{{ item.created_by_username }} &middot; {{ item.source }}{% if item.created_at %} &middot; {{ item.created_at }}{% endif %}</div>
@@ -1035,6 +1079,32 @@ body.workspace-resizing *{
         <div class="pool-inventory-selection-bar__actions">
           <button id="undo-selection" type="button" disabled>Desfazer</button>
           <button id="clear-selection" type="button" disabled>Limpar</button>
+        </div>
+        <div class="pool-smart-metadata" id="pool-smart-metadata-panel">
+          <div class="pool-smart-metadata__fields">
+            <select id="smart-metadata-kind" aria-label="Tipo de Smart Metadata">
+              <option value="target">Alvo</option>
+              <option value="topic">Tema</option>
+              <option value="tag">Tag</option>
+              <option value="section_hint">Hint de se&ccedil;&atilde;o</option>
+              <option value="event_ref">Refer&ecirc;ncia de evento</option>
+              <option value="relevance">Relev&acirc;ncia</option>
+              <option value="source_kind">Tipo de fonte</option>
+              <option value="validation_status">Valida&ccedil;&atilde;o</option>
+            </select>
+            <input id="smart-metadata-value" maxlength="256" placeholder="Valor" aria-label="Valor de Smart Metadata">
+            <select class="pool-smart-metadata__person" id="smart-metadata-person" aria-label="Pessoa existente opcional">
+              <option value="">Alvo livre / sem pessoa vinculada</option>
+              {% for person in persons %}
+              <option value="{{ person.id }}" data-person-label="{{ person.full_name }}">{{ person.full_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="pool-inventory-selection-bar__actions">
+            <button id="smart-metadata-add" type="button" disabled>Aplicar metadata</button>
+            <button id="smart-metadata-remove" type="button" disabled>Remover metadata</button>
+          </div>
+          <div class="pool-smart-metadata__feedback" id="smart-metadata-feedback" role="status" aria-live="polite">Selecione documentos do Pool.</div>
         </div>
       </div>
       <!-- UX02A_POOL_INVENTORY_END -->
@@ -1423,6 +1493,7 @@ restoreDocumentIntakeFeedback();
 const poolInventorySearch=document.getElementById('pool-inventory-search');
 const poolFamilyFilter=document.getElementById('pool-family-filter');
 const poolDocumentFilter=document.getElementById('pool-document-filter');
+const poolMetadataFilters=Array.from(document.querySelectorAll('.pool-metadata-filter'));
 const poolInventoryEmpty=document.getElementById('pool-inventory-empty');
 const poolInventoryGroups=Array.from(document.querySelectorAll('[data-pool-family]'));
 const poolInventoryItems=Array.from(document.querySelectorAll('[data-material-family]'));
@@ -1457,8 +1528,9 @@ function applyPoolInventoryFilters(){
   const query=normalizePoolText(poolInventorySearch?.value);
   const family=poolFamilyFilter?.value||'all';
   const documentFilter=poolDocumentFilter?.value||'all';
+  const activeMetadataFilters=poolMetadataFilters.filter(filter=>filter.value!=='all');
   const documentFilterApplies=family==='all'||family==='document';
-  const filtersActive=Boolean(query)||family!=='all'||(documentFilterApplies&&documentFilter!=='all');
+  const filtersActive=Boolean(query)||family!=='all'||(documentFilterApplies&&documentFilter!=='all')||activeMetadataFilters.length>0;
   let visibleTotal=0;
 
   poolInventoryItems.forEach(item=>{
@@ -1466,6 +1538,7 @@ function applyPoolInventoryFilters(){
     const familyMatches=family==='all'||itemFamily===family;
     const searchMatches=!query||normalizePoolText(item.dataset.searchText).includes(query);
     let documentMatches=true;
+    let metadataMatches=true;
 
     if(itemFamily==='document'&&documentFilterApplies){
       if(documentFilter==='original')documentMatches=item.dataset.hasOriginal==='true';
@@ -1475,7 +1548,19 @@ function applyPoolInventoryFilters(){
       }
     }
 
-    const visible=familyMatches&&searchMatches&&documentMatches;
+    if(activeMetadataFilters.length){
+      if(itemFamily!=='document')metadataMatches=false;
+      else metadataMatches=activeMetadataFilters.every(filter=>{
+        const kind=filter.dataset.metadataKind;
+        const datasetKey=kind==='target'?'metadataTargets':kind==='topic'?'metadataTopics':'metadataTags';
+        let values=[];
+        try{values=JSON.parse(item.dataset[datasetKey]||'[]')}catch(_){}
+        const expected=normalizePoolText(filter.value);
+        return values.some(value=>normalizePoolText(value)===expected);
+      });
+    }
+
+    const visible=familyMatches&&searchMatches&&documentMatches&&metadataMatches;
     item.hidden=!visible;
     if(visible)visibleTotal+=1;
   });
@@ -1502,6 +1587,7 @@ function applyPoolInventoryFilters(){
 poolInventorySearch?.addEventListener('input',applyPoolInventoryFilters);
 poolFamilyFilter?.addEventListener('change',applyPoolInventoryFilters);
 poolDocumentFilter?.addEventListener('change',applyPoolInventoryFilters);
+poolMetadataFilters.forEach(filter=>filter.addEventListener('change',applyPoolInventoryFilters));
 populateDocumentTypeFilters();
 applyPoolInventoryFilters();
 
@@ -1792,11 +1878,18 @@ applyCollapseState(
   false
 );
 
-const sourceCheckboxes=Array.from(document.querySelectorAll('input[form="create-block-form"][name="sources"]'));
+const sourceCheckboxes=Array.from(document.querySelectorAll('.pool-inventory-select[data-source-token]'));
 const undoSelectionBtn=document.getElementById('undo-selection');
 const clearSelectionBtn=document.getElementById('clear-selection');
 const selectionCount=document.getElementById('selection-count');
+const smartMetadataKind=document.getElementById('smart-metadata-kind');
+const smartMetadataValue=document.getElementById('smart-metadata-value');
+const smartMetadataPerson=document.getElementById('smart-metadata-person');
+const smartMetadataAdd=document.getElementById('smart-metadata-add');
+const smartMetadataRemove=document.getElementById('smart-metadata-remove');
+const smartMetadataFeedback=document.getElementById('smart-metadata-feedback');
 let selectionHistory=[];
+let smartMetadataBusy=false;
 let history=[];let recentAction=null;let busy=false;
 
 function selectionSnapshot(){return sourceCheckboxes.map(item=>item.checked)}
@@ -1806,9 +1899,17 @@ function restoreSelection(snapshot){
 }
 function updateSelectionControls(){
   const count=sourceCheckboxes.filter(item=>item.checked).length;
+  const documentCount=sourceCheckboxes.filter(item=>item.checked&&item.dataset.documentId).length;
   selectionCount.textContent=count===1?'1 elemento selecionado':count+' elementos selecionados';
   undoSelectionBtn.disabled=selectionHistory.length===0;
   clearSelectionBtn.disabled=count===0;
+  smartMetadataAdd.disabled=documentCount===0||smartMetadataBusy;
+  smartMetadataRemove.disabled=documentCount===0||smartMetadataBusy;
+  if(smartMetadataFeedback&&!smartMetadataBusy){
+    smartMetadataFeedback.textContent=documentCount===0
+      ?'Selecione documentos do Pool.'
+      :(documentCount===1?'1 documento pronto para metadata.':documentCount+' documentos prontos para metadata.');
+  }
 }
 sourceCheckboxes.forEach((item,index)=>{
   item.addEventListener('change',()=>{
@@ -1838,7 +1939,7 @@ function setPoolSelectionMode(active){
     poolSelectionModeToggle.setAttribute('aria-pressed',String(active));
     poolSelectionModeToggle.textContent=active
       ?'SAIR DA SELE\u00c7\u00c3O'
-      :'SELECIONAR PARA A MESA';
+      :'SELECIONAR MATERIAIS';
   }
   updateSelectionControls();
 }
@@ -1850,12 +1951,89 @@ poolSelectionModeToggle?.addEventListener('click',()=>{
 
 const createBlockForm=document.getElementById('create-block-form');
 createBlockForm.addEventListener('submit',event=>{
-  const count=sourceCheckboxes.filter(item=>item.checked).length;
-  if(count===0){
+  createBlockForm.querySelectorAll('.pool-selection-bridge-input').forEach(item=>item.remove());
+  const selected=sourceCheckboxes.filter(item=>item.checked);
+  if(selected.length===0){
     event.preventDefault();
     alert('Selecione pelo menos um elemento do caso antes de criar o bloco.');
+    return;
+  }
+  selected.forEach(item=>{
+    const hidden=document.createElement('input');
+    hidden.type='hidden';
+    hidden.name='sources';
+    hidden.value=item.dataset.sourceToken;
+    hidden.className='pool-selection-bridge-input';
+    createBlockForm.appendChild(hidden);
+  });
+});
+
+function syncSmartMetadataPerson(){
+  const isTarget=smartMetadataKind?.value==='target';
+  if(smartMetadataPerson){
+    smartMetadataPerson.disabled=!isTarget;
+    smartMetadataPerson.hidden=!isTarget;
+    if(!isTarget)smartMetadataPerson.value='';
+  }
+}
+
+smartMetadataKind?.addEventListener('change',syncSmartMetadataPerson);
+smartMetadataPerson?.addEventListener('change',()=>{
+  if(!smartMetadataPerson.value||smartMetadataValue?.value.trim())return;
+  const option=smartMetadataPerson.selectedOptions[0];
+  if(smartMetadataValue&&option?.dataset.personLabel){
+    smartMetadataValue.value=option.dataset.personLabel;
   }
 });
+syncSmartMetadataPerson();
+
+async function mutateSmartMetadata(operation){
+  const documentIds=sourceCheckboxes
+    .filter(item=>item.checked&&item.dataset.documentId)
+    .map(item=>Number(item.dataset.documentId));
+  const value=smartMetadataValue?.value.trim()||'';
+  if(!documentIds.length||!value){
+    if(smartMetadataFeedback)smartMetadataFeedback.textContent='Selecione documentos e informe um valor.';
+    return;
+  }
+  const linkedPersonId=smartMetadataKind?.value==='target'&&smartMetadataPerson?.value
+    ?Number(smartMetadataPerson.value)
+    :null;
+  smartMetadataBusy=true;
+  updateSelectionControls();
+  if(smartMetadataFeedback)smartMetadataFeedback.textContent='Aplicando Smart Metadata\u2026';
+  try{
+    const response=await fetch(
+      '/api/cases/'+encodeURIComponent(caseRef)+'/smart-metadata/batch',
+      {
+        method:'PUT',
+        headers:{'Accept':'application/json','Content-Type':'application/json'},
+        body:JSON.stringify({
+          document_ids:documentIds,
+          operation,
+          kind:smartMetadataKind.value,
+          value,
+          linked_person_id:linkedPersonId
+        })
+      }
+    );
+    let payload=null;
+    try{payload=await response.json()}catch(_){}
+    if(!response.ok)throw new Error(payload?.error||('Falha ao aplicar metadata (HTTP '+response.status+').'));
+    if(smartMetadataFeedback){
+      smartMetadataFeedback.textContent=(operation==='add'?'Metadata aplicada':'Metadata removida')+
+        ' em '+payload.affected_count+' documento(s).';
+    }
+    window.location.reload();
+  }catch(error){
+    smartMetadataBusy=false;
+    updateSelectionControls();
+    if(smartMetadataFeedback)smartMetadataFeedback.textContent=error?.message||'Falha ao aplicar Smart Metadata.';
+  }
+}
+
+smartMetadataAdd?.addEventListener('click',()=>mutateSmartMetadata('add'));
+smartMetadataRemove?.addEventListener('click',()=>mutateSmartMetadata('remove'));
 
 function addMessage(kind,text,sources){
   if(empty)empty.remove();
