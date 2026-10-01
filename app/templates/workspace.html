@@ -792,9 +792,34 @@ body.workspace-resizing *{
 .workspace-page #pane-context .pool-inventory-selection-bar{position:sticky;bottom:0;z-index:3;display:none;padding:9px 12px 11px;border-top:1px solid var(--border-strong);background:var(--bg-base)}
 .workspace-page #pane-context.is-selection-mode .pool-inventory-selection-bar{display:block}
 .workspace-page #pane-context .pool-inventory-selection-bar__count{margin-bottom:7px;color:var(--text-tertiary);font-family:var(--font-mono);font-size:8px}
-.workspace-page #pane-context .pool-inventory-selection-bar__actions{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.workspace-page #pane-context .pool-inventory-selection-bar__actions{display:flex;flex-wrap:wrap;gap:6px}
 .workspace-page #pane-context .pool-inventory-selection-bar button{height:28px;border:1px solid var(--border-subtle);border-radius:2px;background:transparent;color:var(--text-secondary);font:inherit;font-size:9px;cursor:pointer}
 .workspace-page #pane-context .pool-inventory-selection-bar button:disabled{opacity:.34;cursor:not-allowed}
+.workspace-page #pane-context .pool-inventory-selection-bar__actions button{flex:1 1 auto;padding:0 7px}
+.workspace-page #pane-context .pool-quick-editor{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:5px;margin-top:7px}
+.workspace-page #pane-context .pool-quick-editor__label{grid-column:1/-1;color:var(--text-tertiary);font-family:var(--font-mono);font-size:7px;letter-spacing:.08em}
+.workspace-page #pane-context .pool-quick-editor input{min-width:0;height:28px;padding:0 7px;border:1px solid var(--border-subtle);border-radius:2px;background:var(--bg-elevated);color:var(--text-primary);font:inherit;font-size:9px}
+.workspace-page #pane-context .pool-quick-suggestions{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:4px}
+.workspace-page #pane-context .pool-quick-suggestions button{height:24px;border-color:var(--border-subtle);color:var(--text-tertiary);font-size:8px}
+.workspace-page #pane-context .pool-common-metadata{margin-top:7px;padding-top:7px;border-top:1px solid var(--border-subtle)}
+.workspace-page #pane-context .pool-common-metadata__label{display:block;margin-bottom:5px;color:var(--text-tertiary);font-family:var(--font-mono);font-size:7px;letter-spacing:.06em}
+.workspace-page #pane-context .pool-smart-metadata__feedback{min-height:12px;margin-top:6px;color:var(--text-tertiary);font-size:8px;line-height:1.35}
+.workspace-page #pane-context .pool-inventory-item__metadata,.workspace-page #pane-context .pool-common-metadata__chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
+.workspace-page #pane-context .metadata-chip{display:inline-flex;overflow:hidden;border:1px solid var(--border-subtle);border-radius:10px;background:var(--bg-elevated)}
+.workspace-page #pane-context .metadata-chip--target{border-color:rgba(232,181,89,.42)}
+.workspace-page #pane-context .metadata-chip--topic{border-color:var(--border-strong);border-style:dashed}
+.workspace-page #pane-context .metadata-chip--tag{border-color:rgba(129,199,132,.38)}
+.workspace-page #pane-context .metadata-chip__value,.workspace-page #pane-context .metadata-chip__remove{height:20px!important;padding:0 6px!important;border:0!important;background:transparent!important;color:var(--text-secondary)!important;font-family:var(--font-mono)!important;font-size:7px!important;line-height:20px;cursor:pointer}
+.workspace-page #pane-context .metadata-chip__remove{display:none;padding-left:1px!important;color:var(--error)!important}
+.workspace-page #pane-context.is-selection-mode .metadata-chip:hover .metadata-chip__remove,.workspace-page #pane-context.is-selection-mode .metadata-chip:focus-within .metadata-chip__remove{display:inline-block}
+.workspace-page #pane-context .smart-bins{margin-top:9px;padding-top:8px;border-top:1px solid var(--border-subtle)}
+.workspace-page #pane-context .smart-bins__title{margin-bottom:6px;color:var(--text-secondary);font-family:var(--font-mono);font-size:8px;font-weight:600;letter-spacing:.09em}
+.workspace-page #pane-context .smart-bins__group{margin-top:5px}
+.workspace-page #pane-context .smart-bins__label{display:block;margin-bottom:3px;color:var(--text-tertiary);font-family:var(--font-mono);font-size:7px;letter-spacing:.08em}
+.workspace-page #pane-context .smart-bins__items{display:flex;flex-wrap:wrap;gap:4px}
+.workspace-page #pane-context .smart-bin{display:inline-flex;align-items:center;gap:5px;min-height:24px;padding:2px 7px;border:1px solid var(--border-subtle);border-radius:11px;background:transparent;color:var(--text-tertiary);font:inherit;font-size:8px;cursor:pointer}
+.workspace-page #pane-context .smart-bin strong{color:var(--text-secondary);font-family:var(--font-mono);font-size:7px}
+.workspace-page #pane-context .smart-bin.is-active{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-strong)}
 .workspace-page #pane-context .pool-inventory-family-empty,
 .workspace-page #pane-context .pool-inventory-empty{padding:11px 2px;color:var(--text-tertiary);font-size:10px}
 .workspace-page #pane-context [hidden]{display:none!important}
@@ -911,7 +936,13 @@ body.workspace-resizing *{
             </select>
           </label>
         </div>
-        <button class="pool-inventory-selection-toggle" id="pool-selection-mode-toggle" type="button" aria-pressed="false">SELECIONAR PARA A MESA</button>
+        <section class="smart-bins" id="smart-bins" aria-label="Smart Bins" hidden>
+          <div class="smart-bins__title">SMART BINS</div>
+          <div class="smart-bins__group" data-smart-bin-group="target" hidden><span class="smart-bins__label">ALVOS</span><div class="smart-bins__items"></div></div>
+          <div class="smart-bins__group" data-smart-bin-group="topic" hidden><span class="smart-bins__label">TEMAS</span><div class="smart-bins__items"></div></div>
+          <div class="smart-bins__group" data-smart-bin-group="tag" hidden><span class="smart-bins__label">TAGS</span><div class="smart-bins__items"></div></div>
+        </section>
+        <button class="pool-inventory-selection-toggle" id="pool-selection-mode-toggle" type="button" aria-pressed="false">SELECIONAR MATERIAIS</button>
       </div>
 
       <!-- UX02B_POOL_INTAKE_START -->
@@ -939,7 +970,7 @@ body.workspace-resizing *{
         </div>
         {% for item in persons %}
         <div class="pool-inventory-item" data-material-family="person" data-search-text="{{ item.full_name }} {{ item.person_ref or '' }} {{ item.aliases or '' }} {{ item.cpf or '' }} {{ item.rg or '' }} {{ item.role_in_case or '' }} {{ item.reliability_level or '' }} {{ item.notes or '' }}">
-          <input class="pool-inventory-select" form="create-block-form" type="checkbox" name="sources" value="person:{{ item.id }}" aria-label="Selecionar pessoa {{ item.full_name }}">
+          <input class="pool-inventory-select" type="checkbox" data-source-token="person:{{ item.id }}" aria-label="Selecionar pessoa {{ item.full_name }}">
           <div class="pool-inventory-item__content">
             <span class="pool-inventory-item__primary">{{ item.full_name }}</span>
             <div class="pool-inventory-item__meta">{{ item.person_ref or item.cpf or item.rg or 'sem referencia externa' }}{% if item.role_in_case %} &middot; {{ item.role_in_case }}{% endif %}{% if item.reliability_level %} &middot; {{ item.reliability_level }}{% endif %}</div>
@@ -955,6 +986,7 @@ body.workspace-resizing *{
         </div>
         <div id="case-document-list">
           {% for item in documents %}
+          {% set item_metadata = smart_metadata_by_document.get(item.id, []) %}
           <div
             class="pool-inventory-item pool-inventory-item--document"
             data-material-family="document"
@@ -962,14 +994,16 @@ body.workspace-resizing *{
             data-storage-state="{{ item.storage_state }}"
             data-has-original="{{ 'true' if item.physical_available else 'false' }}"
             data-document-type="{{ item.file_type or item.mime_type or '' }}"
+            data-metadata-targets="{{ item_metadata | selectattr('kind', 'equalto', 'target') | map(attribute='value_text') | list | tojson | forceescape }}"
+            data-metadata-topics="{{ item_metadata | selectattr('kind', 'equalto', 'topic') | map(attribute='value_text') | list | tojson | forceescape }}"
+            data-metadata-tags="{{ item_metadata | selectattr('kind', 'equalto', 'tag') | map(attribute='value_text') | list | tojson | forceescape }}"
             data-search-text="{{ item.filename }} {{ item.document_ref or '' }} {{ item.file_type or '' }} {{ item.mime_type or '' }} {{ item.sha256 or '' }} {{ item.description or '' }} {{ item.imported_at or '' }} {{ item.storage_origin or '' }}"
           >
             <input
               class="pool-inventory-select"
-              form="create-block-form"
               type="checkbox"
-              name="sources"
-              value="document:{{ item.id }}"
+              data-source-token="document:{{ item.id }}"
+              data-document-id="{{ item.id }}"
               aria-label="Selecionar documento {{ item.filename }}"
             >
             <div class="pool-inventory-item__content">
@@ -980,6 +1014,14 @@ body.workspace-resizing *{
               {% else %}
               <span class="pool-inventory-item__state document-state document-state--metadata">SOMENTE METADADOS</span>
               {% endif %}
+              <div class="pool-inventory-item__metadata" data-document-metadata="{{ item.id }}"{% if not item_metadata %} hidden{% endif %}>
+                {% for metadata in item_metadata %}
+                <span class="metadata-chip metadata-chip--{{ metadata.kind }}" data-metadata-id="{{ metadata.id }}" data-metadata-kind="{{ metadata.kind }}" data-metadata-value="{{ metadata.value_text }}" data-linked-person-id="{{ metadata.linked_person_id or '' }}">
+                  <button class="metadata-chip__value" type="button" title="{{ metadata.kind }}">{{ metadata.value_text }}</button>
+                  <button class="metadata-chip__remove" type="button" title="Remover {{ metadata.value_text }}" aria-label="Remover {{ metadata.value_text }}">&times;</button>
+                </span>
+                {% endfor %}
+              </div>
             </div>
             {% if item.physical_available %}
             <a
@@ -1002,7 +1044,7 @@ body.workspace-resizing *{
         </div>
         {% for item in links %}
         <div class="pool-inventory-item" data-material-family="link" data-search-text="{{ item.entity_a_name or '' }} {{ item.entity_a_ref }} {{ item.entity_b_name or '' }} {{ item.entity_b_ref }} {{ item.link_type }} {{ item.link_nature or '' }} {{ item.notes or '' }}">
-          <input class="pool-inventory-select" form="create-block-form" type="checkbox" name="sources" value="link:{{ item.id }}" aria-label="Selecionar vinculo {{ item.id }}">
+          <input class="pool-inventory-select" type="checkbox" data-source-token="link:{{ item.id }}" aria-label="Selecionar vinculo {{ item.id }}">
           <div class="pool-inventory-item__content">
             <span class="pool-inventory-item__primary">{{ item.entity_a_name or item.entity_a_ref }} &rarr; {{ item.entity_b_name or item.entity_b_ref }}</span>
             <div class="pool-inventory-item__meta">{{ item.link_type }}{% if item.link_nature %} &middot; {{ item.link_nature }}{% endif %}</div>
@@ -1018,7 +1060,7 @@ body.workspace-resizing *{
         </div>
         {% for item in annotations %}
         <div class="pool-inventory-item" data-material-family="annotation" data-search-text="{{ item.content }} {{ item.created_by_username }} {{ item.source }} {{ item.created_at }}">
-          <input class="pool-inventory-select" form="create-block-form" type="checkbox" name="sources" value="annotation:{{ item.id }}" aria-label="Selecionar anotacao {{ item.id }}">
+          <input class="pool-inventory-select" type="checkbox" data-source-token="annotation:{{ item.id }}" aria-label="Selecionar anotacao {{ item.id }}">
           <div class="pool-inventory-item__content">
             <span class="pool-inventory-item__primary">{{ item.content[:120] }}{% if item.content|length > 120 %}&hellip;{% endif %}</span>
             <div class="pool-inventory-item__meta">{{ item.created_by_username }} &middot; {{ item.source }}{% if item.created_at %} &middot; {{ item.created_at }}{% endif %}</div>
@@ -1033,9 +1075,21 @@ body.workspace-resizing *{
       <div class="pool-inventory-selection-bar" id="context-selection-bar">
         <div class="pool-inventory-selection-bar__count" id="selection-count">0 elementos selecionados</div>
         <div class="pool-inventory-selection-bar__actions">
+          <button class="metadata-quick-action" type="button" data-quick-kind="target" disabled>+ Alvo</button>
+          <button class="metadata-quick-action" type="button" data-quick-kind="topic" disabled>+ Tema</button>
+          <button class="metadata-quick-action" type="button" data-quick-kind="tag" disabled>+ Tag</button>
           <button id="undo-selection" type="button" disabled>Desfazer</button>
           <button id="clear-selection" type="button" disabled>Limpar</button>
         </div>
+        <div class="pool-quick-editor" id="pool-quick-editor" hidden>
+          <span class="pool-quick-editor__label" id="pool-quick-editor-label"></span>
+          <input id="pool-quick-editor-input" maxlength="256" autocomplete="off">
+          <button id="pool-quick-editor-apply" type="button">Aplicar</button>
+          <button id="pool-quick-editor-cancel" type="button">Cancelar</button>
+          <div class="pool-quick-suggestions" id="pool-quick-suggestions"></div>
+        </div>
+        <div class="pool-common-metadata" id="pool-common-metadata" hidden><span class="pool-common-metadata__label">COMUM AOS SELECIONADOS</span><div class="pool-common-metadata__chips" id="pool-common-metadata-chips"></div></div>
+        <div class="pool-smart-metadata__feedback" id="smart-metadata-feedback" role="status" aria-live="polite"></div>
       </div>
       <!-- UX02A_POOL_INVENTORY_END -->
     </aside>
@@ -1187,6 +1241,11 @@ body.workspace-resizing *{
 <script>
 (function(){
 const caseRef={{ case.case_ref|tojson }};
+const smartMetadataEndpoint='/api/cases/'+encodeURIComponent(caseRef)+'/smart-metadata';
+const smartMetadataSeed={{ smart_metadata_by_document|tojson }};
+const smartMetadataPeople=[{% for person in persons %}{id:{{ person.id }},label:{{ person.full_name|tojson }}}{% if not loop.last %},{% endif %}{% endfor %}];
+let smartMetadataItems=Object.values(smartMetadataSeed).flat();
+let activeSmartBin=null;
 const activeBlockId={{ active_block.id if active_block else 'null' }};
 const input=document.getElementById('athena-input');
 const send=document.getElementById('athena-send');
@@ -1458,7 +1517,7 @@ function applyPoolInventoryFilters(){
   const family=poolFamilyFilter?.value||'all';
   const documentFilter=poolDocumentFilter?.value||'all';
   const documentFilterApplies=family==='all'||family==='document';
-  const filtersActive=Boolean(query)||family!=='all'||(documentFilterApplies&&documentFilter!=='all');
+  const filtersActive=Boolean(query)||family!=='all'||(documentFilterApplies&&documentFilter!=='all')||Boolean(activeSmartBin);
   let visibleTotal=0;
 
   poolInventoryItems.forEach(item=>{
@@ -1466,6 +1525,7 @@ function applyPoolInventoryFilters(){
     const familyMatches=family==='all'||itemFamily===family;
     const searchMatches=!query||normalizePoolText(item.dataset.searchText).includes(query);
     let documentMatches=true;
+    let metadataMatches=true;
 
     if(itemFamily==='document'&&documentFilterApplies){
       if(documentFilter==='original')documentMatches=item.dataset.hasOriginal==='true';
@@ -1475,7 +1535,16 @@ function applyPoolInventoryFilters(){
       }
     }
 
-    const visible=familyMatches&&searchMatches&&documentMatches;
+    if(activeSmartBin){
+      if(itemFamily!=='document')metadataMatches=false;
+      else metadataMatches=smartMetadataItems.some(metadata=>
+        metadata.shared_document_id===Number(item.dataset.documentId)&&
+        metadata.kind===activeSmartBin.kind&&
+        normalizePoolText(metadata.value_text)===normalizePoolText(activeSmartBin.value)
+      );
+    }
+
+    const visible=familyMatches&&searchMatches&&documentMatches&&metadataMatches;
     item.hidden=!visible;
     if(visible)visibleTotal+=1;
   });
@@ -1792,23 +1861,49 @@ applyCollapseState(
   false
 );
 
-const sourceCheckboxes=Array.from(document.querySelectorAll('input[form="create-block-form"][name="sources"]'));
+const sourceCheckboxes=Array.from(document.querySelectorAll('.pool-inventory-select[data-source-token]'));
 const undoSelectionBtn=document.getElementById('undo-selection');
 const clearSelectionBtn=document.getElementById('clear-selection');
 const selectionCount=document.getElementById('selection-count');
+const metadataQuickActions=Array.from(document.querySelectorAll('[data-quick-kind]'));
+const quickMetadataEditor=document.getElementById('pool-quick-editor');
+const quickMetadataLabel=document.getElementById('pool-quick-editor-label');
+const quickMetadataInput=document.getElementById('pool-quick-editor-input');
+const quickMetadataApply=document.getElementById('pool-quick-editor-apply');
+const quickMetadataCancel=document.getElementById('pool-quick-editor-cancel');
+const quickMetadataSuggestions=document.getElementById('pool-quick-suggestions');
+const commonMetadata=document.getElementById('pool-common-metadata');
+const commonMetadataChips=document.getElementById('pool-common-metadata-chips');
+const smartBins=document.getElementById('smart-bins');
+const smartMetadataFeedback=document.getElementById('smart-metadata-feedback');
 let selectionHistory=[];
+let smartMetadataBusy=false;
+let quickMetadataKind=null;
+let quickLinkedPersonId=null;
+let smartMetadataFeedbackTimer=null;
 let history=[];let recentAction=null;let busy=false;
 
+const smartMetadataLabels={target:'Alvo',topic:'Tema',tag:'Tag'};
+const smartMetadataPrompts={target:'Informe um alvo.',topic:'Informe um tema.',tag:'Informe uma tag.'};
+
 function selectionSnapshot(){return sourceCheckboxes.map(item=>item.checked)}
+function selectedDocumentIds(){
+  return sourceCheckboxes
+    .filter(item=>item.checked&&item.dataset.documentId)
+    .map(item=>Number(item.dataset.documentId));
+}
 function restoreSelection(snapshot){
   sourceCheckboxes.forEach((item,index)=>{item.checked=Boolean(snapshot[index])});
   updateSelectionControls();
 }
 function updateSelectionControls(){
   const count=sourceCheckboxes.filter(item=>item.checked).length;
+  const documentCount=selectedDocumentIds().length;
   selectionCount.textContent=count===1?'1 elemento selecionado':count+' elementos selecionados';
   undoSelectionBtn.disabled=selectionHistory.length===0;
   clearSelectionBtn.disabled=count===0;
+  metadataQuickActions.forEach(button=>{button.disabled=documentCount===0||smartMetadataBusy});
+  renderCommonMetadata();
 }
 sourceCheckboxes.forEach((item,index)=>{
   item.addEventListener('change',()=>{
@@ -1828,9 +1923,9 @@ clearSelectionBtn.addEventListener('click',()=>{
   if(!before.some(Boolean))return;
   selectionHistory.push(before);
   sourceCheckboxes.forEach(item=>{item.checked=false});
+  closeQuickMetadataEditor();
   updateSelectionControls();
 });
-updateSelectionControls();
 
 function setPoolSelectionMode(active){
   paneContext?.classList.toggle('is-selection-mode',active);
@@ -1838,7 +1933,7 @@ function setPoolSelectionMode(active){
     poolSelectionModeToggle.setAttribute('aria-pressed',String(active));
     poolSelectionModeToggle.textContent=active
       ?'SAIR DA SELE\u00c7\u00c3O'
-      :'SELECIONAR PARA A MESA';
+      :'SELECIONAR MATERIAIS';
   }
   updateSelectionControls();
 }
@@ -1850,12 +1945,324 @@ poolSelectionModeToggle?.addEventListener('click',()=>{
 
 const createBlockForm=document.getElementById('create-block-form');
 createBlockForm.addEventListener('submit',event=>{
-  const count=sourceCheckboxes.filter(item=>item.checked).length;
-  if(count===0){
+  createBlockForm.querySelectorAll('.pool-selection-bridge-input').forEach(item=>item.remove());
+  const selected=sourceCheckboxes.filter(item=>item.checked);
+  if(selected.length===0){
     event.preventDefault();
     alert('Selecione pelo menos um elemento do caso antes de criar o bloco.');
+    return;
+  }
+  selected.forEach(item=>{
+    const hidden=document.createElement('input');
+    hidden.type='hidden';
+    hidden.name='sources';
+    hidden.value=item.dataset.sourceToken;
+    hidden.className='pool-selection-bridge-input';
+    createBlockForm.appendChild(hidden);
+  });
+});
+
+function metadataIdentity(metadata){
+  return JSON.stringify([
+    metadata.kind,
+    metadata.value_text,
+    metadata.linked_person_id??null
+  ]);
+}
+
+function metadataForDocument(documentId){
+  return smartMetadataItems.filter(
+    metadata=>metadata.shared_document_id===Number(documentId)
+  );
+}
+
+function setSmartMetadataFeedback(message){
+  if(!smartMetadataFeedback)return;
+  if(smartMetadataFeedbackTimer)clearTimeout(smartMetadataFeedbackTimer);
+  smartMetadataFeedback.textContent=message||'';
+  if(message){
+    smartMetadataFeedbackTimer=setTimeout(()=>{
+      if(smartMetadataFeedback.textContent===message){
+        smartMetadataFeedback.textContent='';
+      }
+    },4500);
+  }
+}
+
+function closeQuickMetadataEditor(){
+  quickMetadataKind=null;
+  quickLinkedPersonId=null;
+  quickMetadataEditor.hidden=true;
+  quickMetadataInput.value='';
+  quickMetadataSuggestions.replaceChildren();
+}
+
+function renderQuickMetadataSuggestions(){
+  quickMetadataSuggestions.replaceChildren();
+  if(!quickMetadataKind)return;
+  const query=normalizePoolText(quickMetadataInput.value);
+  const suggestions=[];
+  if(quickMetadataKind==='target'){
+    smartMetadataPeople.forEach(person=>suggestions.push({
+      label:person.label,personId:person.id,title:'Alvo do Caso'
+    }));
+  }
+  const knownValues=Array.from(new Set(
+    smartMetadataItems
+      .filter(metadata=>metadata.kind===quickMetadataKind)
+      .map(metadata=>metadata.value_text)
+  ));
+  knownValues.forEach(label=>{
+    if(!suggestions.some(item=>normalizePoolText(item.label)===normalizePoolText(label))){
+      suggestions.push({label,personId:null,title:'Valor usado neste Caso'});
+    }
+  });
+  suggestions
+    .filter(item=>!query||normalizePoolText(item.label).includes(query))
+    .slice(0,8)
+    .forEach(item=>{
+      const button=document.createElement('button');
+      button.type='button';
+      button.textContent=item.label;
+      button.title=item.title;
+      button.addEventListener('click',()=>{
+        quickMetadataInput.value=item.label;
+        quickLinkedPersonId=item.personId;
+        quickMetadataInput.focus();
+        renderQuickMetadataSuggestions();
+      });
+      quickMetadataSuggestions.appendChild(button);
+    });
+}
+
+function openQuickMetadataEditor(kind){
+  if(!selectedDocumentIds().length){
+    setSmartMetadataFeedback('Selecione pelo menos um documento.');
+    return;
+  }
+  quickMetadataKind=kind;
+  quickLinkedPersonId=null;
+  quickMetadataLabel.textContent='ADICIONAR '+smartMetadataLabels[kind].toLocaleUpperCase('pt-BR');
+  quickMetadataInput.placeholder=kind==='target'?'Nome ou alvo livre':smartMetadataLabels[kind];
+  quickMetadataInput.value='';
+  quickMetadataEditor.hidden=false;
+  renderQuickMetadataSuggestions();
+  requestAnimationFrame(()=>quickMetadataInput.focus());
+}
+
+async function refreshSmartMetadata(){
+  const response=await fetch(smartMetadataEndpoint,{headers:{'Accept':'application/json'}});
+  const payload=await response.json();
+  if(!response.ok)throw new Error(payload?.error||'Falha ao atualizar Smart Metadata.');
+  smartMetadataItems=Array.isArray(payload.items)?payload.items:[];
+  renderSmartMetadata();
+}
+
+async function mutateSmartMetadata({operation,documentIds,kind,value,linkedPersonId=null}){
+  if(smartMetadataBusy)return;
+  if(!documentIds.length){
+    setSmartMetadataFeedback('Selecione pelo menos um documento.');
+    return;
+  }
+  smartMetadataBusy=true;
+  updateSelectionControls();
+  try{
+    const response=await fetch(
+      smartMetadataEndpoint+'/batch',
+      {
+        method:'PUT',
+        headers:{'Accept':'application/json','Content-Type':'application/json'},
+        body:JSON.stringify({
+          document_ids:documentIds,
+          operation,
+          kind,
+          value,
+          linked_person_id:linkedPersonId??null
+        })
+      }
+    );
+    let payload=null;
+    try{payload=await response.json()}catch(_){}
+    if(!response.ok)throw new Error(payload?.error||('Falha ao aplicar metadata (HTTP '+response.status+').'));
+    await refreshSmartMetadata();
+    const count=payload.affected_count;
+    const noun=operation==='add'?(smartMetadataLabels[kind]||'Metadata')+' '+value:value;
+    setSmartMetadataFeedback(
+      operation==='add'
+        ?noun+' aplicada a '+count+' documento(s).'
+        :noun+' removida de '+count+' documento(s).'
+    );
+    if(operation==='add')closeQuickMetadataEditor();
+  }catch(error){
+    setSmartMetadataFeedback(error?.message||'Falha ao aplicar Smart Metadata.');
+  }finally{
+    smartMetadataBusy=false;
+    updateSelectionControls();
+  }
+}
+
+async function applyQuickMetadata(){
+  const value=quickMetadataInput.value.trim();
+  if(!value){
+    setSmartMetadataFeedback(smartMetadataPrompts[quickMetadataKind]||'Informe um valor.');
+    quickMetadataInput.focus();
+    return;
+  }
+  await mutateSmartMetadata({
+    operation:'add',documentIds:selectedDocumentIds(),kind:quickMetadataKind,
+    value,linkedPersonId:quickMetadataKind==='target'?quickLinkedPersonId:null
+  });
+}
+
+function createMetadataChip(metadata,{documentIds,common=false}={}){
+  const chip=document.createElement('span');
+  chip.className='metadata-chip metadata-chip--'+metadata.kind;
+  chip.dataset.metadataId=metadata.id;
+  chip.dataset.metadataKind=metadata.kind;
+  chip.dataset.metadataValue=metadata.value_text;
+  chip.dataset.linkedPersonId=metadata.linked_person_id??'';
+
+  const valueButton=document.createElement('button');
+  valueButton.type='button';
+  valueButton.className='metadata-chip__value';
+  valueButton.textContent=metadata.value_text;
+  valueButton.title=smartMetadataLabels[metadata.kind]||metadata.kind;
+  valueButton.addEventListener('click',()=>{
+    if(!paneContext?.classList.contains('is-selection-mode')&&smartMetadataLabels[metadata.kind]){
+      toggleSmartBin(metadata.kind,metadata.value_text);
+    }
+  });
+
+  const removeButton=document.createElement('button');
+  removeButton.type='button';
+  removeButton.className='metadata-chip__remove';
+  removeButton.textContent='\u00d7';
+  removeButton.title='Remover '+metadata.value_text;
+  removeButton.setAttribute('aria-label','Remover '+metadata.value_text);
+  removeButton.addEventListener('click',event=>{
+    event.stopPropagation();
+    const targets=common?selectedDocumentIds():(documentIds||[metadata.shared_document_id]);
+    mutateSmartMetadata({
+      operation:'remove',documentIds:targets,kind:metadata.kind,
+      value:metadata.value_text,linkedPersonId:metadata.linked_person_id
+    });
+  });
+  chip.append(valueButton,removeButton);
+  return chip;
+}
+
+function renderDocumentMetadata(){
+  poolInventoryItems
+    .filter(item=>item.dataset.materialFamily==='document')
+    .forEach(item=>{
+      const documentId=Number(item.dataset.documentId);
+      const metadata=metadataForDocument(documentId);
+      const container=item.querySelector('[data-document-metadata]');
+      container.replaceChildren(...metadata.map(entry=>
+        createMetadataChip(entry,{documentIds:[documentId]})
+      ));
+      container.hidden=metadata.length===0;
+      item.dataset.metadataTargets=JSON.stringify(metadata.filter(entry=>entry.kind==='target').map(entry=>entry.value_text));
+      item.dataset.metadataTopics=JSON.stringify(metadata.filter(entry=>entry.kind==='topic').map(entry=>entry.value_text));
+      item.dataset.metadataTags=JSON.stringify(metadata.filter(entry=>entry.kind==='tag').map(entry=>entry.value_text));
+    });
+}
+
+function renderSmartBins(){
+  if(activeSmartBin&&!smartMetadataItems.some(metadata=>
+    metadata.kind===activeSmartBin.kind&&
+    normalizePoolText(metadata.value_text)===normalizePoolText(activeSmartBin.value)
+  ))activeSmartBin=null;
+  let totalBins=0;
+  ['target','topic','tag'].forEach(kind=>{
+    const group=smartBins.querySelector('[data-smart-bin-group="'+kind+'"]');
+    const items=group.querySelector('.smart-bins__items');
+    const counts=new Map();
+    smartMetadataItems.filter(metadata=>metadata.kind===kind).forEach(metadata=>{
+      const key=normalizePoolText(metadata.value_text);
+      if(!counts.has(key))counts.set(key,{value:metadata.value_text,documents:new Set()});
+      counts.get(key).documents.add(metadata.shared_document_id);
+    });
+    const bins=Array.from(counts.values()).sort((a,b)=>
+      b.documents.size-a.documents.size||a.value.localeCompare(b.value,'pt-BR')
+    );
+    items.replaceChildren(...bins.map(bin=>{
+      const button=document.createElement('button');
+      button.type='button';
+      button.className='smart-bin';
+      if(activeSmartBin&&activeSmartBin.kind===kind&&normalizePoolText(activeSmartBin.value)===normalizePoolText(bin.value)){
+        button.classList.add('is-active');
+      }
+      const label=document.createElement('span');
+      label.textContent=bin.value;
+      const count=document.createElement('strong');
+      count.textContent=String(bin.documents.size);
+      button.append(label,count);
+      button.addEventListener('click',()=>toggleSmartBin(kind,bin.value));
+      return button;
+    }));
+    group.hidden=bins.length===0;
+    totalBins+=bins.length;
+  });
+  smartBins.hidden=totalBins===0;
+}
+
+function toggleSmartBin(kind,value){
+  const same=activeSmartBin&&activeSmartBin.kind===kind&&
+    normalizePoolText(activeSmartBin.value)===normalizePoolText(value);
+  activeSmartBin=same?null:{kind,value};
+  renderSmartBins();
+  applyPoolInventoryFilters();
+}
+
+function renderCommonMetadata(){
+  if(!commonMetadata||!commonMetadataChips)return;
+  const documentIds=selectedDocumentIds();
+  if(documentIds.length<2){
+    commonMetadata.hidden=true;
+    commonMetadataChips.replaceChildren();
+    return;
+  }
+  const otherKeys=documentIds.slice(1).map(documentId=>
+    new Set(metadataForDocument(documentId).map(metadataIdentity))
+  );
+  const common=metadataForDocument(documentIds[0]).filter(metadata=>
+    otherKeys.every(keys=>keys.has(metadataIdentity(metadata)))
+  );
+  commonMetadataChips.replaceChildren(...common.map(metadata=>
+    createMetadataChip(metadata,{common:true})
+  ));
+  commonMetadata.hidden=common.length===0;
+}
+
+function renderSmartMetadata(){
+  renderDocumentMetadata();
+  renderSmartBins();
+  renderCommonMetadata();
+  applyPoolInventoryFilters();
+}
+
+metadataQuickActions.forEach(button=>button.addEventListener('click',()=>
+  openQuickMetadataEditor(button.dataset.quickKind)
+));
+quickMetadataApply?.addEventListener('click',applyQuickMetadata);
+quickMetadataCancel?.addEventListener('click',closeQuickMetadataEditor);
+quickMetadataInput?.addEventListener('input',()=>{
+  quickLinkedPersonId=null;
+  renderQuickMetadataSuggestions();
+});
+quickMetadataInput?.addEventListener('keydown',event=>{
+  if(event.key==='Enter'){
+    event.preventDefault();
+    applyQuickMetadata();
+  }else if(event.key==='Escape'){
+    event.preventDefault();
+    closeQuickMetadataEditor();
   }
 });
+
+renderSmartMetadata();
+updateSelectionControls();
 
 function addMessage(kind,text,sources){
   if(empty)empty.remove();
