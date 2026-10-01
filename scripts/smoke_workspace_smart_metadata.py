@@ -21,58 +21,86 @@ required_route = {
 missing_route = [name for name, marker in required_route.items() if marker not in route]
 
 required_template = {
-    "real-target-filter": 'id="pool-target-filter"',
-    "real-topic-filter": 'id="pool-topic-filter"',
-    "real-tag-filter": 'id="pool-tag-filter"',
-    "real-target-values": "smart_metadata_filter_values.target",
-    "real-topic-values": "smart_metadata_filter_values.topic",
-    "real-tag-values": "smart_metadata_filter_values.tag",
+    "smart-bins": 'id="smart-bins"',
+    "target-bin-group": 'data-smart-bin-group="target"',
+    "topic-bin-group": 'data-smart-bin-group="topic"',
+    "tag-bin-group": 'data-smart-bin-group="tag"',
+    "dynamic-bin-counts": "documents:new Set()",
+    "active-bin": "button.classList.add('is-active')",
+    "bin-filter": "metadata.kind===activeSmartBin.kind",
     "target-badge": "data-metadata-targets=",
     "topic-badge": "data-metadata-topics=",
     "tag-badge": "data-metadata-tags=",
     "badge-kind": 'data-metadata-kind="{{ metadata.kind }}"',
+    "clean-chip-label": "valueButton.textContent=metadata.value_text",
+    "chip-navigation": "toggleSmartBin(metadata.kind,metadata.value_text)",
+    "chip-direct-remove": "className='metadata-chip__remove'",
     "generic-selection": '.pool-inventory-select[data-source-token]',
     "document-selection": 'data-source-token="document:{{ item.id }}"',
-    "batch-controls": 'id="smart-metadata-add"',
-    "batch-remove": 'id="smart-metadata-remove"',
-    "batch-endpoint": "/smart-metadata/batch",
+    "quick-target": 'data-quick-kind="target"',
+    "quick-topic": 'data-quick-kind="topic"',
+    "quick-tag": 'data-quick-kind="tag"',
+    "inline-editor": 'id="pool-quick-editor"',
+    "enter-applies": "if(event.key==='Enter')",
+    "escape-cancels": "else if(event.key==='Escape')",
+    "target-people": "smartMetadataPeople.forEach(person=>suggestions.push",
+    "explicit-person-id": "quickLinkedPersonId=item.personId",
+    "common-intersection": "otherKeys.every(keys=>keys.has(metadataIdentity(metadata)))",
+    "common-remove": "createMetadataChip(metadata,{common:true})",
+    "batch-endpoint": "smartMetadataEndpoint+'/batch'",
+    "canonical-refresh": "async function refreshSmartMetadata()",
     "case-isolation": "encodeURIComponent(caseRef)",
     "batch-put": "method:'PUT'",
     "batch-documents": "document_ids:documentIds",
     "human-agnostic-browser": "linked_person_id:linkedPersonId",
     "filter-function": "function applyPoolInventoryFilters()",
-    "target-filter-listener": "poolMetadataFilters.forEach(filter=>filter.addEventListener('change',applyPoolInventoryFilters))",
     "source-selection-change": "item.addEventListener('change'",
-    "batch-add-listener": "smartMetadataAdd?.addEventListener('click',()=>mutateSmartMetadata('add'))",
-    "batch-remove-listener": "smartMetadataRemove?.addEventListener('click',()=>mutateSmartMetadata('remove'))",
-    "legacy-block-bridge": "hidden.name='sources'",
-    "legacy-block-bridge-class": "pool-selection-bridge-input",
 }
 missing_template = [
     name for name, marker in required_template.items() if marker not in template
 ]
 
-# Selection controls must be siblings of the block form and submit values only
-# through the compatibility bridge when the legacy form is submitted.
+# Selection must remain independent of a legacy form when one is present.
+# The presence or functionality of a legacy block/bridge is not a PR-02 gate.
 block_form_start = template.find('id="create-block-form"')
 block_form_end = template.find("</form>", block_form_start)
 selection_start = template.find('id="context-selection-bar"')
-if block_form_start < 0 or block_form_end < 0 or selection_start < 0:
-    selection_decoupled = False
-else:
-    selection_decoupled = not (block_form_start < selection_start < block_form_end)
+selection_decoupled = selection_start >= 0 and not (
+    block_form_start >= 0 and block_form_start < selection_start < block_form_end
+)
+legacy_quick_action_absent = not any(marker in template for marker in (
+    'id="use-selection-in-block"', "useSelectionInBlock", "Usar no bloco",
+))
 
 # The Smart Metadata mutation segment must only call the Case batch API; it
 # must not create or depend on blocks/workspaces.
-mutation_start = template.find("async function mutateSmartMetadata(operation)")
+mutation_start = template.find("async function mutateSmartMetadata({operation,documentIds,kind,value,linkedPersonId=null})")
 mutation_end = template.find("function addMessage(", mutation_start)
 mutation_segment = template[mutation_start:mutation_end] if mutation_start >= 0 else ""
 metadata_block_coupling = any(
     marker in mutation_segment.lower()
     for marker in ("create-block", "workspace_id", "/blocks", "investigativeblock")
 )
+permanent_form_absent = not any(marker in template for marker in (
+    'id="smart-metadata-kind"',
+    'id="smart-metadata-value"',
+    'id="smart-metadata-person"',
+    'id="smart-metadata-add"',
+    'id="smart-metadata-remove"',
+))
+metadata_reload_absent = "window.location.reload()" not in mutation_segment
+metadata_select_filters_absent = not any(marker in template for marker in (
+    'id="pool-target-filter"',
+    'id="pool-topic-filter"',
+    'id="pool-tag-filter"',
+))
 
-if missing_route or missing_template or not selection_decoupled or metadata_block_coupling:
+if (
+    missing_route or missing_template or not selection_decoupled
+    or not legacy_quick_action_absent
+    or metadata_block_coupling or not permanent_form_absent
+    or not metadata_reload_absent or not metadata_select_filters_absent
+):
     details = []
     if missing_route:
         details.append("missing-route=" + ",".join(missing_route))
@@ -80,14 +108,23 @@ if missing_route or missing_template or not selection_decoupled or metadata_bloc
         details.append("missing-template=" + ",".join(missing_template))
     if not selection_decoupled:
         details.append("selection-still-coupled-to-block-form")
+    if not legacy_quick_action_absent:
+        details.append("legacy-block-quick-action-present")
     if metadata_block_coupling:
         details.append("metadata-block-coupling")
+    if not permanent_form_absent:
+        details.append("permanent-metadata-form-present")
+    if not metadata_reload_absent:
+        details.append("metadata-reloads-page")
+    if not metadata_select_filters_absent:
+        details.append("legacy-metadata-select-filters-present")
     raise SystemExit("PR-02 WORKSPACE SMART METADATA SMOKE: FAIL -> " + " | ".join(details))
 
 print("PR-02 WORKSPACE SMART METADATA SMOKE: OK")
-print("case-context=real-metadata-and-filter-values")
-print("target-topic-tag=real-data-filters-and-badges")
-print("selection=generic-pool-with-legacy-submit-bridge")
-print("batch=case-scoped-put-controls-and-listeners")
+print("case-context=real-metadata")
+print("target-topic-tag=quick-actions-clean-chips-smart-bins")
+print("selection=generic-pool-independent-of-legacy-blocks")
+print("batch=inline-editor-common-intersection-direct-remove")
+print("refresh=canonical-get-without-page-reload")
 print("metadata-to-block-dependency=no")
 print("jinja=parse-ok")
