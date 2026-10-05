@@ -6,6 +6,7 @@ caller's transaction.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Iterable, Mapping
 
@@ -13,6 +14,13 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.models.derived_content import DocumentTextExtraction, DocumentTextPage
 from app.models.platea import SharedCase, SharedDocument
+from app.services.document_text_native_executor import (
+    ENGINE_NAME,
+    ENGINE_VERSION,
+    NativeTextExtractionError,
+    extract_native_pdf,
+)
+from app.services.storage_service import LocalCaseStorage
 
 
 CAPABILITY = "document.extract_text"
@@ -37,6 +45,18 @@ class DocumentTextNotFound(DocumentTextError):
 class DocumentTextSourceUnavailable(DocumentTextError):
     status_code = 409
     code = "source_unavailable"
+
+
+class DocumentTextUnsupportedSource(DocumentTextError):
+    status_code = 415
+    code = "unsupported_source_type"
+
+
+@dataclass(frozen=True)
+class DocumentTextExecutionResult:
+    extraction: DocumentTextExtraction
+    reused: bool
+    text_obtained: bool
 
 
 def _validate_source_document(document: SharedDocument) -> str:
@@ -205,3 +225,91 @@ def stage_extraction(
     db.add(extraction)
     db.flush()
     return extraction
+
+
+def execute_native_text_extraction(
+    db: Session,
+    *,
+    storage: LocalCaseStorage,
+    case_ref: str,
+    document_id: int,
+    extraction_profile: str,
+    created_by_operator_id: int | None = None,
+    created_by_username: str | None = None,
+) -> DocumentTextExecutionResult:
+    """Execute native PDF extraction without committing the caller's transaction."""
+    document = resolve_source_document(
+        db,
+        case_ref=case_ref,
+        document_id=document_id,
+    )
+    is_pdf = document.mime_type == "application/pdf"
+    if document.mime_type is None:
+        is_pdf = (document.file_type or "").strip().lower() == "pdf"
+    if not is_pdf:
+        raise DocumentTextUnsupportedSource(
+            "Tipo de documento não suportado para extração nativa."
+        )
+
+    reusable = find_latest_reusable_extraction(
+        db,
+        document=document,
+        extraction_profile=extraction_profile,
+    )
+    if reusable is not None:
+        return DocumentTextExecutionResult(
+            extraction=reusable,
+            reused=True,
+            text_obtained=any(page.raw_text.strip() for page in reusable.pages),
+        )
+
+    source_path = storage.resolve(document.storage_relpath)
+    completed_at = datetime.now(timezone.utc)
+    try:
+        native_result = extract_native_pdf(source_path)
+    except NativeTextExtractionError as exc:
+        extraction = stage_extraction(
+            db,
+            document=document,
+            extraction_profile=extraction_profile,
+            status="failed",
+            executor_type="native",
+            engine=ENGINE_NAME,
+            engine_version=ENGINE_VERSION,
+            error_code="native_extraction_failed",
+            error_detail=str(exc),
+            created_by_operator_id=created_by_operator_id,
+            created_by_username=created_by_username,
+            completed_at=completed_at,
+        )
+        return DocumentTextExecutionResult(
+            extraction=extraction,
+            reused=False,
+            text_obtained=False,
+        )
+
+    extraction = stage_extraction(
+        db,
+        document=document,
+        extraction_profile=extraction_profile,
+        status="ready" if native_result.text_obtained else "failed",
+        executor_type="native",
+        engine=native_result.engine,
+        engine_version=native_result.engine_version,
+        pages=(
+            {"page_number": page.page_number, "raw_text": page.raw_text}
+            for page in native_result.pages
+        ),
+        error_code=(
+            None if native_result.text_obtained else "native_text_not_obtained"
+        ),
+        error_detail=native_result.fallback_reason,
+        created_by_operator_id=created_by_operator_id,
+        created_by_username=created_by_username,
+        completed_at=completed_at,
+    )
+    return DocumentTextExecutionResult(
+        extraction=extraction,
+        reused=False,
+        text_obtained=native_result.text_obtained,
+    )

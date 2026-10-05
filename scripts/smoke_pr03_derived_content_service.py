@@ -94,20 +94,25 @@ def _migration_smoke(root: Path) -> None:
     _alembic(root, "upgrade", CURRENT_HEAD)
 
 
-def _assert_no_engine_integration() -> None:
-    source_path = REPO_ROOT / "app" / "services" / "document_text_service.py"
-    tree = ast.parse(source_path.read_text(encoding="utf-8"))
+def _assert_no_disallowed_engine_integration() -> None:
+    source_paths = (
+        REPO_ROOT / "app" / "services" / "document_text_service.py",
+        REPO_ROOT / "app" / "services" / "document_text_native_executor.py",
+    )
+    trees = [ast.parse(path.read_text(encoding="utf-8")) for path in source_paths]
     imported_modules = {
         node.module or ""
+        for tree in trees
         for node in ast.walk(tree)
         if isinstance(node, ast.ImportFrom)
     } | {
         alias.name
+        for tree in trees
         for node in ast.walk(tree)
         if isinstance(node, ast.Import)
         for alias in node.names
     }
-    forbidden = {"openai", "pytesseract", "fitz", "pypdf", "ollama", "app.services.storage_service"}
+    forbidden = {"openai", "pytesseract", "fitz", "ollama", "transformers"}
     assert not imported_modules.intersection(forbidden)
 
 
@@ -205,7 +210,7 @@ def _service_smoke(db_path: Path) -> None:
 def main() -> None:
     migration_path = REPO_ROOT / "alembic" / "versions" / "0014_pr03_document_text.py"
     assert 'down_revision = "0011_pr02_smart_metadata"' in migration_path.read_text(encoding="utf-8")
-    _assert_no_engine_integration()
+    _assert_no_disallowed_engine_integration()
     with tempfile.TemporaryDirectory(prefix="circe-pr03-derived-") as tmp:
         root = Path(tmp)
         _service_smoke(root / "service.db")
