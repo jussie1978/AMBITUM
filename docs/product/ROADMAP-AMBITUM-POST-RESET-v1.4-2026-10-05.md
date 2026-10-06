@@ -1,14 +1,14 @@
 # ROADMAP — CIRCE AMBITUM Pós-Reset
 
 **Versão:** 1.4
-**Data:** 05/10/2026
+**Data:** 06/10/2026
 **Substitui:** `ROADMAP-AMBITUM-POST-RESET-v1.3-2026-10-05.md`
 **Autoridade:** Product Reset + Dual Retrieval + Capability Harness + Project Master v2.4
-**Baseline observada:** `main` / `origin/main` no merge da PR #2, commit abreviado `315418e`
+**Baseline de fechamento:** branch `feat/pr03-derived-content-text-extraction`, commit abreviado `e29a5d7`
 
 ## 1. Estado e ordem
 
-PR-00, PR-01 e PR-02 estão concluídas.
+PR-00, PR-01, PR-02 e PR-03 estão concluídas.
 
 A revisão de produto/arquitetura da PR-03 foi concluída e alterou seu enquadramento: OCR deixa de ser tratado como workflow de produto e passa a ser um executor possível da capability `document.extract_text`.
 
@@ -18,7 +18,8 @@ A revisão de produto/arquitetura da PR-03 foi concluída e alterou seu enquadra
 | PR-01 | Audit & Freeze | DONE | Contratos preservados e legado congelado |
 | PR-02 | Smart Metadata + Smart Bins Lite | DONE | Feature e fechamento documental integrados |
 | REVIEW-PR03 | Capability / Derived Content Review | **DONE** | Capability Harness e escopo revisado aprovados |
-| PR-03 | Derived Content Foundation + Document Text Extraction | **IMPLEMENTATION NEXT** | Obter texto rastreável sem expor mecanismo técnico ao operador |
+| PR-03 | Derived Content Foundation + Document Text Extraction | **DONE** | Capability, persistência, fallback e superfície mínima validados |
+| PRODUCT-SHELL-V1 | AMBITUM Product Shell V1 | **IMPLEMENTATION NEXT** | Substituir a superfície funcional provisória por um shell de produto coerente |
 | PR-04 | Evidence Retrieval | PLANNED / REVIEW REQUIRED | Recuperação rastreável do Caso consumindo derivados quando necessário |
 | PR-05 | KB + Knowledge Retrieval | PLANNED / REVIEW REQUIRED | Referência/método separados de fatos do Caso |
 | PR-06 | Conversational Workspace / Mesa IA | PLANNED / REVIEW REQUIRED | Orquestrar capabilities existentes; não duplicá-las |
@@ -39,7 +40,7 @@ Aplicar também:
 
 Se o mecanismo puder ficar oculto sem reduzir controle, segurança ou rastreabilidade, ocultá-lo do workflow principal.
 
-## 3. PR-03 — escopo aprovado
+## 3. PR-03 — concluída
 
 Nome:
 
@@ -67,9 +68,21 @@ texto nativo?
 
 Casos ambíguos: oferecer melhoria sob decisão humana.
 
-## 4. Gates PR-03
+Entregue e validado:
 
-PR-03 deve provar:
+- pypdf para texto nativo;
+- RapidOCR local;
+- fallback VLM local Qwen3-VL via llama.cpp;
+- proveniência e roteamento misto por página;
+- API/UI mínima e revisão humana separada de `raw_text`;
+- migrations `0014_pr03_document_text` e `0015_pr03_page_provenance`;
+- banco operacional validado em `0015_pr03_page_provenance`.
+
+O modelo Qwen3-VL real ainda requer validação operacional quando instalado; o fallback possui smoke determinístico. A UI entregue é uma superfície funcional provisória, não o Product Shell definitivo.
+
+## 4. Gates PR-03 comprovados
+
+PR-03 comprovou:
 
 - original soberano;
 - Case isolation;
@@ -214,15 +227,8 @@ Permanecem congelados como requisitos obrigatórios:
 
 ## 14. Próxima unidade oficial
 
-Após integração desta documentação:
+Após o fechamento da PR-03:
 
-> **PR-03 — Derived Content Foundation + Document Text Extraction**
+> **AMBITUM PRODUCT SHELL V1**
 
-Antes de código:
-
-- branch nova a partir da `main`;
-- preflight;
-- inspeção de modelos/serviços existentes;
-- definição física mínima da persistência;
-- escolha proporcional dos executores locais;
-- plano de testes dos gates da SPEC.
+Essa unidade posterior deve tratar o novo shell de produto. Não pertence à PR-03 e não altera o estado concluído da capability `document.extract_text`.

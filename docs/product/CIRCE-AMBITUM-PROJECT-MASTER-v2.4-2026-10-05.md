@@ -1,13 +1,12 @@
 # CIRCE AMBITUM — PROJECT MASTER
 
 **Versão:** 2.4
-**Data:** 05/10/2026
-**Status:** PRODUCT RESET ATIVO / PR-02 DONE / REVIEW-PR03 APROVADA / PR-03 IMPLEMENTATION NEXT
+**Data:** 06/10/2026
+**Status:** PRODUCT RESET ATIVO / PR-03 DONE / AMBITUM PRODUCT SHELL V1 NEXT
 **Substitui:** `CIRCE-AMBITUM-PROJECT-MASTER-v2.3-2026-10-05.md`
 **Repositório canônico:** `jussie1978/AMBITUM`
-**Baseline observada:** `main` / `origin/main` no merge da PR #2, commit abreviado `315418e`
-**PR #2:** fechamento documental da PR-02 e gate de revisão da PR-03
-**Decisão arquitetural nova:** `ADR-AMBITUM-PR03-001-CAPABILITY-HARNESS-v1.0-2026-10-05.md`
+**Baseline de fechamento:** branch `feat/pr03-derived-content-text-extraction`, commit abreviado `e29a5d7`
+**Decisão arquitetural:** `ADR-AMBITUM-PR03-001-CAPABILITY-HARNESS-v1.0-2026-10-05.md`
 
 ## 1. Identidade e valor
 
@@ -39,10 +38,11 @@ Esses exemplos orientam arquitetura futura; apenas capacidades explicitamente ma
 | Fechamento documental PR-02 | Integrado via PR #2 |
 | Baseline observada após PR #2 | `315418e` |
 | REVIEW-PR03 | **APROVADA** |
-| ADR Capability Harness | **DECISÃO ACEITA / PENDENTE DE INTEGRAÇÃO DESTA REVISÃO** |
-| PR-03 | **IMPLEMENTATION NEXT**, após integração documental |
+| ADR Capability Harness | **DECISÃO ACEITA E IMPLEMENTADA NA PR-03** |
+| PR-03 | **DONE** — fechamento técnico e operacional validado |
+| Banco operacional | Alembic `0015_pr03_page_provenance` validado após backup e ensaio em cópia |
 
-PR-03 ainda não está implementada.
+PR-03 implementa `document.extract_text` com extração nativa via pypdf, OCR local via RapidOCR e fallback VLM local via servidor llama.cpp OpenAI-compatible. A execução preserva proveniência por página, inclusive roteamento misto, e mantém revisão humana separada de `raw_text`.
 
 ## 3. Arquitetura alvo
 
@@ -184,6 +184,20 @@ texto nativo utilizável?
 
 Casos ambíguos devem favorecer ação humana de **Melhorar extração**, não consumo automático de VLM.
 
+### 7.1. Estado entregue
+
+- extração nativa de PDF com pypdf;
+- OCR local com RapidOCR;
+- fallback VLM local governado para Qwen3-VL via llama.cpp;
+- roteamento e proveniência por página, com pai `mixed` quando aplicável;
+- API e UI mínima para obter, consultar e revisar texto;
+- `reviewed_text` separado e auditável, sem sobrescrever `raw_text`;
+- migrations aditivas `0014_pr03_document_text` e `0015_pr03_page_provenance`;
+- banco operacional migrado e validado em `0015_pr03_page_provenance`;
+- smokes determinísticos cobrindo native, OCR/mixed, fallback VLM, HTTP e UI.
+
+A execução com o modelo Qwen3-VL real permanece como validação operacional futura; o contrato e o fallback possuem smoke local determinístico e não dependem de cloud, OpenAI ou Ollama.
+
 ## 8. Derived Content
 
 Derived Content é reconhecido como conceito arquitetural de resultado persistente ligado a material soberano.
@@ -229,6 +243,8 @@ VLM pode executar extração, mas a origem VLM deve ser rastreável.
 
 A conversa não substitui interfaces que representem melhor o problema.
 
+A superfície de documento entregue na PR-03 é funcional e deliberadamente provisória. Ela prova o fluxo curto de extração e revisão, mas não constitui o novo shell definitivo. O próximo ciclo oficial é **AMBITUM PRODUCT SHELL V1**.
+
 ## 11. Evidence e Knowledge Retrieval
 
 Continuam semanticamente distintos.
@@ -271,7 +287,8 @@ Não ampliar legado para viabilizar PR-03.
 | PR-01 | Audit & Freeze | DONE |
 | PR-02 | Smart Metadata + Smart Bins Lite | DONE |
 | REVIEW-PR03 | Capability/Derived Content Review | **DONE** |
-| PR-03 | Derived Content Foundation + Document Text Extraction | **IMPLEMENTATION NEXT** |
+| PR-03 | Derived Content Foundation + Document Text Extraction | **DONE** |
+| PRODUCT-SHELL-V1 | AMBITUM Product Shell V1 | **IMPLEMENTATION NEXT** |
 | PR-04 | Evidence Retrieval | PLANNED / REVIEW REQUIRED |
 | PR-05 | KB + Knowledge Retrieval | PLANNED / REVIEW REQUIRED |
 | PR-06 | Conversational Workspace / Mesa IA | PLANNED / REVIEW REQUIRED |
@@ -313,9 +330,7 @@ Rejeitar ou simplificar direção que:
 
 ## 17. Próxima ação
 
-1. Integrar esta revisão documental com ADR + SPEC PR-03.
-2. Somente após merge documental, abrir branch de implementação PR-03.
-3. Fazer preflight contra a `main` então corrente.
-4. Implementar um vertical slice de `document.extract_text`.
-5. Validar texto nativo, OCR, fallback VLM, revisão, reutilização, falha e Case isolation.
-6. Confirmar ganho operacional antes de ampliar para PR-04.
+1. Integrar o fechamento da PR-03.
+2. Iniciar, em unidade posterior e separada, **AMBITUM PRODUCT SHELL V1**.
+3. Manter a superfície atual apenas como UI funcional provisória até esse ciclo.
+4. Realizar validação operacional do Qwen3-VL real quando o servidor/modelo local estiver disponível, sem reabrir o escopo funcional da PR-03.

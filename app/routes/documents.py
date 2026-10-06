@@ -4,6 +4,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, File, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.config import settings
 from app.database import SessionLocal
@@ -17,6 +18,15 @@ from app.services.document_intake_service import (
     UnsupportedDocumentType,
     incorporate_document,
 )
+from app.services.document_text_service import (
+    DEFAULT_EXTRACTION_PROFILE,
+    DocumentTextError,
+    execute_document_text_extraction,
+    find_latest_document_extraction,
+    review_extraction_page,
+    serialize_extraction,
+    serialize_page,
+)
 from app.services.storage_service import (
     EmptyStoredFile,
     InvalidStorageReference,
@@ -28,6 +38,16 @@ from app.services.storage_service import (
 
 
 router = APIRouter()
+
+
+class TextExtractionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class TextReviewRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    reviewed_text: str | None = Field(..., max_length=1_000_000)
 
 
 def _case_storage() -> LocalCaseStorage:
@@ -92,6 +112,246 @@ def _document_payload(document: SharedDocument) -> dict:
         "storage_state": document.storage_state,
         "physical_available": document.physical_available,
     }
+
+
+def _text_extraction_payload(result) -> dict:
+    return {
+        "state": result.extraction.status,
+        "reused": result.reused,
+        "text_obtained": result.text_obtained,
+        "fallback_candidate": result.fallback_candidate,
+        "extraction": serialize_extraction(result.extraction),
+    }
+
+
+def _document_in_case(db, *, case_ref: str, document_id: int) -> SharedDocument | None:
+    return (
+        db.query(SharedDocument)
+        .join(SharedDocument.case)
+        .filter(
+            SharedDocument.id == document_id,
+            SharedDocument.case.has(case_ref=case_ref),
+        )
+        .first()
+    )
+
+
+@router.post("/api/cases/{case_ref}/documents/{document_id}/text-extraction")
+async def document_text_extraction_create(
+    request: Request,
+    case_ref: str,
+    document_id: int,
+    payload: TextExtractionRequest | None = None,
+):
+    del payload
+    operator = request.session.get("operator", {})
+    ip = request.client.host if request.client else None
+    db = SessionLocal()
+    try:
+        try:
+            log_action(
+                db,
+                action="document_text_extraction_requested",
+                description=(
+                    f"Text extraction requested; case={case_ref}; "
+                    f"document_id={document_id}."
+                ),
+                operator_id=operator.get("id"),
+                operator_username=operator.get("username"),
+                entity_type="shared_document",
+                entity_id=str(document_id),
+                ip_address=ip,
+                manage_transaction=False,
+            )
+            result = execute_document_text_extraction(
+                db,
+                storage=_case_storage(),
+                case_ref=case_ref,
+                document_id=document_id,
+                extraction_profile=DEFAULT_EXTRACTION_PROFILE,
+                created_by_operator_id=operator.get("id"),
+                created_by_username=operator.get("username"),
+            )
+            succeeded = result.extraction.status == "ready"
+            log_action(
+                db,
+                action=(
+                    "document_text_extraction_completed"
+                    if succeeded
+                    else "document_text_extraction_failed"
+                ),
+                description=(
+                    f"Text extraction {'completed' if succeeded else 'failed'}; "
+                    f"case={case_ref}; document_id={document_id}; "
+                    f"extraction_id={result.extraction.id}; reused={result.reused}."
+                ),
+                operator_id=operator.get("id"),
+                operator_username=operator.get("username"),
+                entity_type="document_text_extraction",
+                entity_id=str(result.extraction.id),
+                ip_address=ip,
+                manage_transaction=False,
+            )
+            db.commit()
+            return JSONResponse(_text_extraction_payload(result))
+        except DocumentTextError as exc:
+            _audit_failure(
+                db,
+                action="document_text_extraction_failed",
+                description=(
+                    f"Text extraction rejected; case={case_ref}; "
+                    f"document_id={document_id}; code={exc.code}."
+                ),
+                operator=operator,
+                ip_address=ip,
+                entity_type="shared_document",
+                entity_id=str(document_id),
+            )
+            return JSONResponse(
+                {"error": str(exc), "code": exc.code},
+                status_code=exc.status_code,
+            )
+        except Exception:
+            _audit_failure(
+                db,
+                action="document_text_extraction_failed",
+                description=(
+                    f"Text extraction rolled back after technical failure; "
+                    f"case={case_ref}; document_id={document_id}."
+                ),
+                operator=operator,
+                ip_address=ip,
+                entity_type="shared_document",
+                entity_id=str(document_id),
+            )
+            return JSONResponse(
+                {"error": "Text extraction failed.", "code": "extraction_failed"},
+                status_code=500,
+            )
+    finally:
+        db.close()
+
+
+@router.get("/api/cases/{case_ref}/documents/{document_id}/text-extraction")
+async def document_text_extraction_get(
+    request: Request,
+    case_ref: str,
+    document_id: int,
+):
+    del request
+    db = SessionLocal()
+    try:
+        document = _document_in_case(db, case_ref=case_ref, document_id=document_id)
+        if document is None:
+            return JSONResponse(
+                {"error": "Document not found in the informed Case.", "code": "not_found"},
+                status_code=404,
+            )
+        if not document.storage_relpath or not document.sha256:
+            return {"state": "empty", "extraction": None}
+        extraction = find_latest_document_extraction(
+            db,
+            document=document,
+            extraction_profile=DEFAULT_EXTRACTION_PROFILE,
+        )
+        if extraction is None:
+            return {"state": "empty", "extraction": None}
+        return {
+            "state": extraction.status,
+            "text_obtained": any(page.raw_text.strip() for page in extraction.pages),
+            "extraction": serialize_extraction(extraction),
+        }
+    finally:
+        db.close()
+
+
+@router.put(
+    "/api/cases/{case_ref}/documents/{document_id}/text-extraction/"
+    "{extraction_id}/pages/{page_number}/review"
+)
+async def document_text_extraction_review(
+    request: Request,
+    case_ref: str,
+    document_id: int,
+    extraction_id: int,
+    page_number: int,
+    payload: TextReviewRequest,
+):
+    operator = request.session.get("operator", {})
+    ip = request.client.host if request.client else None
+    db = SessionLocal()
+    try:
+        try:
+            extraction, page = review_extraction_page(
+                db,
+                case_ref=case_ref,
+                document_id=document_id,
+                extraction_id=extraction_id,
+                page_number=page_number,
+                reviewed_text=payload.reviewed_text,
+                operator_id=operator.get("id"),
+                operator_username=operator.get("username"),
+            )
+            log_action(
+                db,
+                action="document_text_review_saved",
+                description=(
+                    f"Human text review saved; case={case_ref}; "
+                    f"document_id={document_id}; extraction_id={extraction.id}; "
+                    f"page_number={page.page_number}; "
+                    f"cleared={payload.reviewed_text is None}."
+                ),
+                operator_id=operator.get("id"),
+                operator_username=operator.get("username"),
+                entity_type="document_text_page",
+                entity_id=str(page.id),
+                ip_address=ip,
+                manage_transaction=False,
+            )
+            db.commit()
+            return {
+                "status": "review_saved",
+                "extraction_id": extraction.id,
+                "page": serialize_page(page),
+            }
+        except DocumentTextError as exc:
+            _audit_failure(
+                db,
+                action="document_text_review_failed",
+                description=(
+                    f"Human text review rejected; case={case_ref}; "
+                    f"document_id={document_id}; extraction_id={extraction_id}; "
+                    f"page_number={page_number}; code={exc.code}."
+                ),
+                operator=operator,
+                ip_address=ip,
+                entity_type="document_text_extraction",
+                entity_id=str(extraction_id),
+            )
+            return JSONResponse(
+                {"error": str(exc), "code": exc.code},
+                status_code=exc.status_code,
+            )
+        except Exception:
+            _audit_failure(
+                db,
+                action="document_text_review_failed",
+                description=(
+                    f"Human text review rolled back after technical failure; "
+                    f"case={case_ref}; document_id={document_id}; "
+                    f"extraction_id={extraction_id}; page_number={page_number}."
+                ),
+                operator=operator,
+                ip_address=ip,
+                entity_type="document_text_extraction",
+                entity_id=str(extraction_id),
+            )
+            return JSONResponse(
+                {"error": "Human text review failed.", "code": "review_failed"},
+                status_code=500,
+            )
+    finally:
+        db.close()
 
 
 @router.post("/api/cases/{case_ref}/documents/intake")

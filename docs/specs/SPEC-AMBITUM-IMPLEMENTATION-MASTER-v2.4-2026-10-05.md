@@ -1,12 +1,12 @@
 # SPEC-AMBITUM — IMPLEMENTATION MASTER
 
 **Versão:** 2.4
-**Data:** 05/10/2026
-**Status:** PR-02 DONE / REVIEW-PR03 DONE / PR-03 IMPLEMENTATION NEXT
+**Data:** 06/10/2026
+**Status:** PR-03 DONE / AMBITUM PRODUCT SHELL V1 NEXT
 **Substitui:** `SPEC-AMBITUM-IMPLEMENTATION-MASTER-v2.3-2026-10-05.md`
 **Autoridade:** Product Reset + Dual Retrieval + Capability Harness + Project Master v2.4
 **Repositório:** `jussie1978/AMBITUM`
-**Baseline observada:** `main` / `origin/main` no merge da PR #2, commit abreviado `315418e`
+**Baseline de fechamento:** branch `feat/pr03-derived-content-text-extraction`, commit abreviado `e29a5d7`
 
 ## 1. Objetivo
 
@@ -32,19 +32,18 @@ revisão
 
 ## 2. Estado seguro observado
 
-Após o merge da PR #2, foi observado:
+No fechamento técnico da PR-03, foi observado:
 
 ```text
 ROOT: C:\Projetos\CIRCE_ATHENA
 REMOTE: https://github.com/jussie1978/AMBITUM.git
-BRANCH: main
-UPSTREAM: origin/main
-HEAD abreviado: 315418e
-LOCAL == REMOTO: sim
+BRANCH: feat/pr03-derived-content-text-extraction
+HEAD abreviado antes do fechamento documental: e29a5d7
 WORKING TREE: limpa
+ALEMBIC OPERACIONAL: 0015_pr03_page_provenance
 ```
 
-Novo preflight deve ser executado antes da implementação, pois o estado pode mudar após integração desta documentação.
+O banco operacional foi migrado somente após backup com SHA-256 conferido e ensaio bem-sucedido em cópia isolada.
 
 ## 3. Roadmap
 
@@ -54,7 +53,8 @@ Novo preflight deve ser executado antes da implementação, pois o estado pode m
 | PR-01 | Audit & Freeze | DONE |
 | PR-02 | Smart Metadata + Smart Bins Lite | DONE |
 | REVIEW-PR03 | Capability / Derived Content Review | DONE |
-| PR-03 | Derived Content Foundation + Document Text Extraction | **IMPLEMENTATION NEXT** |
+| PR-03 | Derived Content Foundation + Document Text Extraction | **DONE** |
+| PRODUCT-SHELL-V1 | AMBITUM Product Shell V1 | **IMPLEMENTATION NEXT** |
 | PR-04 | Evidence Retrieval | PLANNED / REVIEW REQUIRED |
 | PR-05 | KB + Knowledge Retrieval | PLANNED / REVIEW REQUIRED |
 | PR-06 | Conversational Workspace / Mesa IA | PLANNED / REVIEW REQUIRED |
@@ -86,9 +86,11 @@ Migration histórica:
 0009_at06b_curated_intake_storage
   → 0010_ux03a_product_sections
   → 0011_pr02_smart_metadata
+  → 0014_pr03_document_text
+  → 0015_pr03_page_provenance
 ```
 
-PR-03 pode adicionar migration aditiva após inspeção do estado real.
+As migrations `0014` e `0015` foram aplicadas e validadas no banco operacional, preservando as estruturas e contagens anteriores.
 
 ## 5. Capability Harness — contrato aceito
 
@@ -141,6 +143,15 @@ Objetivo:
 > obter texto utilizável e rastreável de documento do Caso sem exigir que o policial escolha o mecanismo de extração.
 
 ## 7. Sequência de implementação PR-03
+
+Sequência concluída. O resultado integrado contém:
+
+- pypdf como executor nativo;
+- RapidOCR como executor OCR local;
+- cliente de fallback VLM local para Qwen3-VL servido por llama.cpp;
+- roteamento por página e provenance `native`, `ocr` ou `vlm`, com extraction `mixed` quando necessário;
+- API/UI mínima e revisão humana auditável separada de `raw_text`;
+- persistência aditiva pelas migrations `0014` e `0015`.
 
 ### T01 — inspeção/preflight
 
@@ -292,6 +303,8 @@ A PR-03 não fecha sem evidência para:
 
 Testes devem usar material sintético ou autorizado.
 
+Estado de fechamento: smokes fundacional, native, OCR/mixed, VLM fallback, HTTP e UI passaram. O fallback VLM possui servidor fake determinístico; a execução contra o modelo Qwen3-VL real permanece validação operacional futura e não invalida o fechamento funcional.
+
 ## 13. Stop-loss
 
 Parar antes de ampliar se surgir necessidade de:
@@ -323,13 +336,6 @@ NEXUS pode participar futuramente do harness em unidade própria.
 
 ## 15. Documentação e integração
 
-Esta revisão documental:
+PR-03 está concluída e pronta para Pull Request. Sua superfície atual é funcional e provisória: não deve ser expandida ou redesenhada neste fechamento.
 
-- formaliza Capability Harness;
-- redefine PR-03;
-- não implementa código;
-- não cria migration;
-- não escolhe biblioteca final de OCR;
-- não escolhe VLM obrigatório.
-
-Após merge documental, a implementação deve nascer de branch nova baseada na `main` então corrente.
+O próximo ciclo é **AMBITUM PRODUCT SHELL V1**, em unidade posterior e separada. PR-04 e demais unidades permanecem planejadas após essa reorganização de superfície.
