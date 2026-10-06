@@ -23,6 +23,20 @@
     letter-spacing: -.015em;
 }
 
+.home-header__brand {
+    margin-right: 14px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .13em;
+}
+
+.home-header__assistant {
+    margin-right: 16px;
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 600;
+}
+
 .home-header__spacer { flex: 1; }
 
 .home-header__user {
@@ -314,7 +328,7 @@
 
 .modules-grid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 12px;
 }
 
@@ -567,8 +581,10 @@
 
     <div class="home-main">
         <header class="home-header">
+            <a class="home-header__brand" href="/">AMBITUM</a>
             <div class="home-header__title">Início</div>
             <div class="home-header__spacer"></div>
+            <a class="home-header__assistant" href="/assistant">Assistente</a>
             <div class="home-header__user">
                 <div class="home-header__avatar">{{ (operator.full_name or "?")[:2].upper() }}</div>
                 <div>
@@ -582,8 +598,8 @@
             <section class="summary-panel">
                 <div class="summary-copy">
                     <div class="summary-eyebrow">VISÃO OPERACIONAL</div>
-                    <div class="summary-title">Situação atual do núcleo</div>
-                    <div class="summary-sub">Casos abertos, atividade recente e visão das ferramentas disponíveis.</div>
+                    <div class="summary-title">Seu ambiente operacional</div>
+                    <div class="summary-sub">Retome Casos, acompanhe atividade real e acesse o Assistente global.</div>
                 </div>
 
                 <div class="summary-stats">
@@ -597,7 +613,7 @@
                     </div>
                     <div class="stat-card">
                         <div class="stat-value" style="color:var(--success)">ON</div>
-                        <div class="stat-label">Athena local</div>
+                        <div class="stat-label">AMBITUM local</div>
                     </div>
                 </div>
             </section>
@@ -688,7 +704,7 @@
                         {% endif %}
 
                         <div class="ops-foot">
-                            Estados reais da fila local. Novas fontes táticas poderão ser agregadas conforme os módulos entrarem em operação.
+                            Estados reais da fila local do AMBITUM.
                         </div>
                     </div>
                 </aside>
@@ -696,113 +712,25 @@
 
             <section class="modules-section">
                 <div class="modules-head">
-                    <div class="modules-title">Ferramentas</div>
-                    <div class="modules-meta">catálogo funcional · ADR-002</div>
+                    <div class="modules-title">Acessos principais</div>
+                    <div class="modules-meta">superfícies disponíveis</div>
                 </div>
-
                 <div class="modules-grid">
+                    <a class="module-card module-card--active" href="/assistant">
+                        <div class="module-card__top"><div class="module-card__icon"><svg viewBox="0 0 24 24"><path d="M8 9h8M8 13h5M5 19l-1.5 2v-5A8 8 0 1 1 5 19Z"/></svg></div><div class="module-card__badge">global</div></div>
+                        <div class="module-card__title">Assistente</div>
+                        <div class="module-card__desc">Assistência global com contexto local quando disponível.</div>
+                    </a>
                     <a class="module-card module-card--active" href="/platea">
-                        <div class="module-card__top">
-                            <div class="module-card__icon">
-                                <svg viewBox="0 0 24 24">
-                                    <path d="M4 5h16v14H4z"/>
-                                    <path d="M8 9h8M8 13h5"/>
-                                </svg>
-                            </div>
-                            <div class="module-card__badge">ativo</div>
-                        </div>
-                        <div class="module-card__title">Gestor de Investigações</div>
-                        <div class="module-card__desc">Casos, entidades, contexto e organização do trabalho investigativo.</div>
+                        <div class="module-card__top"><div class="module-card__icon"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM8 9h8M8 13h5"/></svg></div><div class="module-card__badge">ativo</div></div>
+                        <div class="module-card__title">Casos</div>
+                        <div class="module-card__desc">Materiais e contexto do trabalho investigativo.</div>
                     </a>
-
                     <a class="module-card module-card--active" href="/photos">
-                        <div class="module-card__top">
-                            <div class="module-card__icon">
-                                <svg viewBox="0 0 24 24">
-                                    <rect x="3" y="5" width="18" height="14" rx="2"/>
-                                    <circle cx="9" cy="10" r="2"/>
-                                    <path d="m21 15-4.5-4.5L8 19"/>
-                                </svg>
-                            </div>
-                            <div class="module-card__badge">ativo</div>
-                        </div>
+                        <div class="module-card__top"><div class="module-card__icon"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 15-4.5-4.5L8 19"/></svg></div><div class="module-card__badge">global</div></div>
                         <div class="module-card__title">Banco de Fotos</div>
-                        <div class="module-card__desc">Acervo fotográfico e comparação facial assistida com validação humana.</div>
+                        <div class="module-card__desc">Acervo institucional e comparação com validação humana.</div>
                     </a>
-
-                    <div class="module-card module-card--planned">
-                        <div class="module-card__top">
-                            <div class="module-card__icon">
-                                <svg viewBox="0 0 24 24">
-                                    <rect x="3" y="4" width="18" height="16" rx="2"/>
-                                    <path d="M8 4v16M16 4v16"/>
-                                    <path d="M3 9h5M16 9h5M3 15h5M16 15h5"/>
-                                </svg>
-                            </div>
-                            <div class="module-card__badge">planejado</div>
-                        </div>
-                        <div class="module-card__title">Laboratório de Evidências</div>
-                        <div class="module-card__desc">OCR, extração de frames e transcrição preservando original e derivados.</div>
-                    </div>
-
-                    <div class="module-card module-card--planned">
-                        <div class="module-card__top">
-                            <div class="module-card__icon">
-                                <svg viewBox="0 0 24 24">
-                                    <circle cx="11" cy="11" r="7"/>
-                                    <path d="m20 20-4-4"/>
-                                    <path d="M8 11h6M11 8v6"/>
-                                </svg>
-                            </div>
-                            <div class="module-card__badge">planejado</div>
-                        </div>
-                        <div class="module-card__title">Pesquisa em Fontes Abertas · ÓRION</div>
-                        <div class="module-card__desc">OSINT e coleta orientada por fontes públicas através da integração controlada.</div>
-                    </div>
-
-                    <div class="module-card module-card--planned">
-                        <div class="module-card__top">
-                            <div class="module-card__icon">
-                                <svg viewBox="0 0 24 24">
-                                    <path d="M4 18V8M10 18V4M16 18v-7M22 18H2"/>
-                                </svg>
-                            </div>
-                            <div class="module-card__badge">planejado</div>
-                        </div>
-                        <div class="module-card__title">Analisador Financeiro</div>
-                        <div class="module-card__desc">Fluxos, consolidações, tipologias e vínculos financeiros para avaliação analítica.</div>
-                    </div>
-
-                    <div class="module-card module-card--planned">
-                        <div class="module-card__top">
-                            <div class="module-card__icon">
-                                <svg viewBox="0 0 24 24">
-                                    <circle cx="6" cy="6" r="2"/>
-                                    <circle cx="18" cy="6" r="2"/>
-                                    <circle cx="12" cy="18" r="2"/>
-                                    <path d="M7.7 7.1 10.7 16M16.3 7.1 13.3 16M8 6h8"/>
-                                </svg>
-                            </div>
-                            <div class="module-card__badge">planejado</div>
-                        </div>
-                        <div class="module-card__title">Diagrama Investigativo</div>
-                        <div class="module-card__desc">Representação visual de entidades e vínculos no contexto de casos e workspaces.</div>
-                    </div>
-
-                    <div class="module-card module-card--planned">
-                        <div class="module-card__top">
-                            <div class="module-card__icon">
-                                <svg viewBox="0 0 24 24">
-                                    <path d="M6 3h9l3 3v15H6z"/>
-                                    <path d="M14 3v4h4"/>
-                                    <path d="M9 12h6M9 16h6"/>
-                                </svg>
-                            </div>
-                            <div class="module-card__badge">planejado</div>
-                        </div>
-                        <div class="module-card__title">Assistente de Relatórios</div>
-                        <div class="module-card__desc">Estruturação e padronização de relatórios com revisão e aprovação humana.</div>
-                    </div>
                 </div>
             </section>
 
@@ -830,7 +758,7 @@
     </div>
 
     <div class="status-bar">
-        <span><span class="status-dot status-dot--ok"></span>Athena online</span>
+        <span><span class="status-dot status-dot--ok"></span>AMBITUM local</span>
         <span class="status-bar__sep">|</span>
         <span>Ambiente local</span>
         <span class="status-bar__sep">|</span>

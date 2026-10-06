@@ -93,20 +93,22 @@ body{
 
 <section class="assistant-page">
 <header class="assistant-header">
-    <div class="assistant-header__title">Assistente de Inteligência</div>
-    <div class="assistant-header__sub">Athena · contexto local</div>
+    <a href="/" style="font-size:13px;font-weight:700;letter-spacing:.13em">AMBITUM</a>
+    <div class="assistant-header__title">Assistente</div>
+    <div class="assistant-header__sub">Global · contexto local quando disponível</div>
     <div class="assistant-header__status" id="llm-status">
         <span class="assistant-status-dot"></span>
         <span>verificando modelo local</span>
     </div>
+    <div style="padding-left:14px;border-left:1px solid var(--border-subtle);font-size:13px;font-weight:600;white-space:nowrap">{{ operator.full_name }}</div>
 </header>
 
 <main class="chat-stream" id="chat-stream">
 <div class="chat-column" id="chat-column">
 <section class="empty-state" id="empty-state">
-    <div class="empty-state__eyebrow">CIRCE // ATHENA</div>
+    <div class="empty-state__eyebrow">AMBITUM / ASSISTENTE</div>
     <h1>Como posso ajudar na sua análise?</h1>
-    <p>Athena pode consultar o contexto investigativo local, manter o contexto desta conversa e executar ações suportadas conforme o modo definido pelo operador. Dados de casos permanecem rastreáveis à fonte e ações são auditadas.</p>
+    <p>O Assistente opera globalmente e usa contexto investigativo local quando ele é fornecido de forma segura. Dados de Casos permanecem rastreáveis à fonte e ações são auditadas.</p>
 </section>
 </div>
 </main>
@@ -114,7 +116,7 @@ body{
 <footer class="chat-composer-wrap">
 <div class="chat-composer-column">
 <div class="chat-composer">
-<textarea class="chat-input" id="chat-input" rows="1" placeholder="Pergunte à Athena..." aria-label="Mensagem para Athena"></textarea>
+<textarea class="chat-input" id="chat-input" rows="1" placeholder="Pergunte ao Assistente..." aria-label="Mensagem para o Assistente"></textarea>
 <div class="composer-toolbar">
     <button class="composer-btn" type="button" disabled title="Anexos entram em etapa posterior">＋ Anexar</button>
     <button class="composer-btn" type="button" disabled title="Contexto investigativo local do caso">Escopo: contexto local</button>
@@ -207,13 +209,13 @@ function addAssistantMessage(text){
     emptyState?.remove();
     const node=document.createElement('article');
     node.className='message message--assistant';
-    node.innerHTML=`<div class="message__avatar"><svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M8 9h8"/><path d="M8 13h5"/><path d="M5 19l-1.5 2v-5A8 8 0 1 1 5 19Z"/></svg></div><div class="message__body"><div class="message__label">ATHENA</div><div class="message__text">${renderMarkdown(text)}</div></div>`;
+    node.innerHTML=`<div class="message__avatar"><svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M8 9h8"/><path d="M8 13h5"/><path d="M5 19l-1.5 2v-5A8 8 0 1 1 5 19Z"/></svg></div><div class="message__body"><div class="message__label">ASSISTENTE</div><div class="message__text">${renderMarkdown(text)}</div></div>`;
     column.appendChild(node);scrollBottom();
 }
 function addTyping(){
     const node=document.createElement('article');
     node.className='message message--assistant';node.id='typing-message';
-    node.innerHTML=`<div class="message__avatar"><svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M8 9h8"/><path d="M8 13h5"/><path d="M5 19l-1.5 2v-5A8 8 0 1 1 5 19Z"/></svg></div><div class="message__body"><div class="message__label">ATHENA</div><div class="typing"><span></span><span></span><span></span></div></div>`;
+    node.innerHTML=`<div class="message__avatar"><svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M8 9h8"/><path d="M8 13h5"/><path d="M5 19l-1.5 2v-5A8 8 0 1 1 5 19Z"/></svg></div><div class="message__body"><div class="message__label">ASSISTENTE</div><div class="typing"><span></span><span></span><span></span></div></div>`;
     column.appendChild(node);scrollBottom();
 }
 function updateActiveCase(data){
@@ -292,14 +294,14 @@ async function sendMessage(){
         });
         const data=await response.json();
         document.getElementById('typing-message')?.remove();
-        addAssistantMessage(data.answer||'Athena não retornou conteúdo.');
+        addAssistantMessage(data.answer||'O Assistente não retornou conteúdo.');
         conversationHistory.push({role:'assistant',content:data.answer||''});
         updateActiveCase(data);
         updateRecentAction(data);
         if(data.pending_action)addPendingAction(data.pending_action);
     }catch(_){
         document.getElementById('typing-message')?.remove();
-        const fallback='Não foi possível contactar o serviço local da Athena.';
+        const fallback='Não foi possível contactar o serviço local do Assistente.';
         addAssistantMessage(fallback);
         conversationHistory.push({role:'assistant',content:fallback});
     }finally{busy=false;sendBtn.disabled=false;input.focus()}

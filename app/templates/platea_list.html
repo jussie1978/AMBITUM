@@ -179,9 +179,11 @@
   <!-- AREA PRINCIPAL -->
   <div class="main-area">
     <div class="page-header">
-      <span class="page-header__title">Gestor de Investigações</span>
+      <a href="/" style="font-size:13px;font-weight:700;letter-spacing:.13em">AMBITUM</a>
+      <span class="page-header__title">Casos</span>
       <span class="page-header__subtitle">{{ total }} caso(s) disponível(is)</span>
       <div class="page-header__spacer"></div>
+      <a href="/assistant" class="btn-text" style="font-weight:600">Assistente</a>
       <div class="page-header__user">
         <div class="page-header__avatar">{{ (operator.full_name or "?")[:2].upper() }}</div>
         <div>
@@ -267,7 +269,7 @@
 
       {% else %}
       <div class="card" style="padding:48px;text-align:center">
-        <div style="color:var(--text-tertiary);font-size:13px">Nenhum caso disponível no Gestor de Investigações.</div>
+        <div style="color:var(--text-tertiary);font-size:13px">Nenhum Caso disponível.</div>
         <div style="color:var(--text-tertiary);font-size:12px;margin-top:8px">
           Casos aparecerão aqui conforme as fontes e os fluxos de integração habilitados para o núcleo.
         </div>
@@ -279,11 +281,11 @@
 
   <!-- STATUS BAR -->
   <div class="status-bar">
-    <span><span class="status-dot status-dot--ok"></span>Athena online</span>
+    <span><span class="status-dot status-dot--ok"></span>AMBITUM local</span>
     <span class="status-bar__sep">|</span>
     <span>{{ operator.username if operator else "" }}</span>
     <span class="status-bar__sep">|</span>
-    <span>Gestor de Investigações</span>
+    <span>Casos</span>
     <span class="status-bar__sep">|</span>
     <span>{{ total }} caso(s)</span>
   </div>
