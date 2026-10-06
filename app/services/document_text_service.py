@@ -39,6 +39,7 @@ from app.services.storage_service import LocalCaseStorage
 
 
 CAPABILITY = "document.extract_text"
+DEFAULT_EXTRACTION_PROFILE = "document-text-default-v1"
 VALID_STATUSES = frozenset({"processing", "ready", "failed"})
 VALID_EXECUTOR_TYPES = frozenset({"native", "ocr", "vlm", "mixed"})
 VALID_PAGE_EXECUTOR_TYPES = frozenset({"native", "ocr", "vlm"})
@@ -139,6 +140,92 @@ def find_latest_reusable_extraction(
         )
         .first()
     )
+
+
+def find_latest_document_extraction(
+    db: Session,
+    *,
+    document: SharedDocument,
+    extraction_profile: str = DEFAULT_EXTRACTION_PROFILE,
+) -> DocumentTextExtraction | None:
+    """Return latest current-source execution without starting processing."""
+    source_sha256 = _validate_source_document(document)
+    return (
+        db.query(DocumentTextExtraction)
+        .options(selectinload(DocumentTextExtraction.pages))
+        .filter(
+            DocumentTextExtraction.shared_document_id == document.id,
+            DocumentTextExtraction.shared_case_id == document.shared_case_id,
+            DocumentTextExtraction.source_sha256 == source_sha256,
+            DocumentTextExtraction.extraction_profile == extraction_profile,
+            DocumentTextExtraction.capability == CAPABILITY,
+        )
+        .order_by(
+            DocumentTextExtraction.created_at.desc(),
+            DocumentTextExtraction.id.desc(),
+        )
+        .first()
+    )
+
+
+def review_extraction_page(
+    db: Session,
+    *,
+    case_ref: str,
+    document_id: int,
+    extraction_id: int,
+    page_number: int,
+    reviewed_text: str | None,
+    operator_id: int | None,
+    operator_username: str | None,
+) -> tuple[DocumentTextExtraction, DocumentTextPage]:
+    """Stage a human transcription review while keeping raw text immutable."""
+    if isinstance(extraction_id, bool) or not isinstance(extraction_id, int) or extraction_id <= 0:
+        raise DocumentTextError("extraction_id must be a positive integer.")
+    if isinstance(page_number, bool) or not isinstance(page_number, int) or page_number <= 0:
+        raise DocumentTextError("page_number must be a positive integer.")
+    if reviewed_text is not None and not isinstance(reviewed_text, str):
+        raise DocumentTextError("reviewed_text must be text or null.")
+
+    case = resolve_case(db, case_ref)
+    document = (
+        db.query(SharedDocument)
+        .filter(
+            SharedDocument.id == document_id,
+            SharedDocument.shared_case_id == case.id,
+        )
+        .first()
+    )
+    if document is None:
+        raise DocumentTextNotFound("Document not found in the informed Case.")
+
+    extraction = (
+        db.query(DocumentTextExtraction)
+        .options(selectinload(DocumentTextExtraction.pages))
+        .filter(
+            DocumentTextExtraction.id == extraction_id,
+            DocumentTextExtraction.shared_document_id == document.id,
+            DocumentTextExtraction.shared_case_id == case.id,
+            DocumentTextExtraction.capability == CAPABILITY,
+        )
+        .first()
+    )
+    if extraction is None:
+        raise DocumentTextNotFound("Text extraction not found for this document.")
+
+    page = next(
+        (item for item in extraction.pages if item.page_number == page_number),
+        None,
+    )
+    if page is None:
+        raise DocumentTextNotFound("Extraction page not found.")
+
+    page.reviewed_text = reviewed_text
+    page.reviewed_by_operator_id = operator_id
+    page.reviewed_by_username = operator_username
+    page.reviewed_at = datetime.now(timezone.utc)
+    db.flush()
+    return extraction, page
 
 
 def _serialize_page_foundation(page: DocumentTextPage) -> dict:

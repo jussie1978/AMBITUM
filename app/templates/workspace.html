@@ -838,6 +838,25 @@ body.workspace-resizing *{
 .workspace-page #pane-context .pool-intake-dropzone.is-error{border-color:var(--error);color:var(--error)}
 .workspace-page #pane-context .pool-intake-dropzone[aria-busy="true"]{cursor:wait}
 
+/* PR03_DOCUMENT_TEXT_SURFACE ------------------------------------ */
+.workspace-page #pane-context .document-text-actions{display:flex;align-items:center;gap:5px}
+.workspace-page #pane-context .document-text-trigger{padding:4px 6px;border:1px solid var(--border-subtle);border-radius:3px;background:transparent;color:var(--text-tertiary);font-family:var(--font-mono);font-size:8px;cursor:pointer;white-space:nowrap}
+.workspace-page #pane-context .document-text-trigger:hover{border-color:var(--accent);color:var(--accent)}
+.workspace-page #pane-context .document-text-trigger:disabled{opacity:.38;cursor:not-allowed}
+.workspace-page #pane-context .document-text-panel{grid-column:1/-1;margin:5px 0 7px;padding:8px;border:1px solid var(--border-subtle);border-radius:3px;background:var(--bg-base)}
+.workspace-page #pane-context .document-text-status{color:var(--text-tertiary);font-family:var(--font-mono);font-size:8px;line-height:1.4}
+.workspace-page #pane-context .document-text-status.is-error{color:var(--error)}
+.workspace-page #pane-context .document-text-page{margin-top:7px;padding-top:7px;border-top:1px solid rgba(44,46,56,.72)}
+.workspace-page #pane-context .document-text-page__head{display:flex;justify-content:space-between;gap:8px;color:var(--text-tertiary);font-family:var(--font-mono);font-size:7px;letter-spacing:.05em}
+.workspace-page #pane-context .document-text-page__source-label{margin-top:6px;color:var(--text-tertiary);font-family:var(--font-mono);font-size:7px;letter-spacing:.04em}
+.workspace-page #pane-context .document-text-page__raw{max-height:150px;margin:6px 0 0;overflow:auto;white-space:pre-wrap;color:var(--text-secondary);font-family:var(--font-mono);font-size:9px;line-height:1.45}
+.workspace-page #pane-context .document-text-page__reviewed{margin-top:6px;padding:6px;border-left:2px solid var(--accent);white-space:pre-wrap;color:var(--text-primary);font-size:9px;line-height:1.45}
+.workspace-page #pane-context .document-text-page__error{margin-top:5px;color:var(--error);font-size:8px}
+.workspace-page #pane-context .document-text-review{margin-top:7px}
+.workspace-page #pane-context .document-text-review textarea{width:100%;min-height:80px;padding:6px;border:1px solid var(--border-subtle);border-radius:2px;background:var(--bg-elevated);color:var(--text-primary);font:inherit;font-size:9px;resize:vertical}
+.workspace-page #pane-context .document-text-review__actions{display:flex;gap:5px;margin-top:5px}
+.workspace-page #pane-context .document-text-review button{height:25px;padding:0 7px;border:1px solid var(--border-subtle);border-radius:2px;background:transparent;color:var(--text-secondary);font-size:8px;cursor:pointer}
+
 </style>
 
 <section class="workspace-page">
@@ -1023,13 +1042,25 @@ body.workspace-resizing *{
                 {% endfor %}
               </div>
             </div>
-            {% if item.physical_available %}
-            <a
-              class="document-original-link"
-              href="/api/documents/{{ item.id }}/original"
-              title="Recuperar o original fisico"
-            >ORIGINAL</a>
-            {% endif %}
+            <div class="document-text-actions">
+              <button
+                class="document-text-trigger"
+                type="button"
+                data-document-text-trigger="{{ item.id }}"
+                {% if not item.physical_available %}disabled{% endif %}
+              >Obter texto</button>
+              {% if item.physical_available %}
+              <a
+                class="document-original-link"
+                href="/api/documents/{{ item.id }}/original"
+                title="Recuperar o original fisico"
+              >ORIGINAL</a>
+              {% endif %}
+            </div>
+            <div class="document-text-panel" data-document-text-panel="{{ item.id }}" hidden>
+              <div class="document-text-status" role="status" aria-live="polite">Sem extração.</div>
+              <div class="document-text-pages"></div>
+            </div>
           </div>
           {% else %}
           <div class="pool-inventory-family-empty">Nenhum documento no Caso.</div>
@@ -1477,6 +1508,183 @@ poolIntakeDropzone?.addEventListener('drop',event=>{
 });
 
 restoreDocumentIntakeFeedback();
+
+// PR03_DOCUMENT_TEXT_SURFACE
+const documentTextTriggers=Array.from(document.querySelectorAll('[data-document-text-trigger]'));
+const documentTextState=new Map();
+
+function documentTextEndpoint(documentId){
+  return '/api/cases/'+encodeURIComponent(caseRef)+'/documents/'+encodeURIComponent(documentId)+'/text-extraction';
+}
+
+function documentTextOrigin(executorType){
+  return {native:'Nativo',ocr:'OCR',vlm:'Visão'}[executorType]||executorType||'Desconhecida';
+}
+
+function setDocumentTextStatus(panel,message,isError=false){
+  const status=panel?.querySelector('.document-text-status');
+  if(!status)return;
+  status.textContent=message;
+  status.classList.toggle('is-error',isError);
+}
+
+function renderDocumentText(documentId,payload){
+  const panel=document.querySelector('[data-document-text-panel="'+documentId+'"]');
+  if(!panel)return;
+  panel.hidden=false;
+  const pagesContainer=panel.querySelector('.document-text-pages');
+  pagesContainer.replaceChildren();
+  const extraction=payload?.extraction||null;
+  documentTextState.set(String(documentId),payload||{state:'empty',extraction:null});
+
+  if(!extraction){
+    setDocumentTextStatus(panel,'Sem extração.');
+    return;
+  }
+
+  const pages=Array.isArray(extraction.pages)?extraction.pages:[];
+  const readyPages=pages.filter(page=>page.status==='ready').length;
+  if(payload.state==='processing')setDocumentTextStatus(panel,'Processando…');
+  else if(payload.state==='ready')setDocumentTextStatus(panel,'Texto disponível.');
+  else if(readyPages>0)setDocumentTextStatus(panel,'Extração parcial: há páginas com falha.',true);
+  else setDocumentTextStatus(panel,'Extração falhou.',true);
+
+  pages.forEach(page=>{
+    const article=document.createElement('article');
+    article.className='document-text-page';
+
+    const head=document.createElement('div');
+    head.className='document-text-page__head';
+    const pageLabel=document.createElement('span');
+    pageLabel.textContent='PÁGINA '+page.page_number;
+    const origin=document.createElement('span');
+    origin.textContent=documentTextOrigin(page.executor_type);
+    head.append(pageLabel,origin);
+    article.appendChild(head);
+
+    if(page.raw_text){
+      const rawLabel=document.createElement('div');
+      rawLabel.className='document-text-page__source-label';
+      rawLabel.textContent='Texto derivado (origem)';
+      const raw=document.createElement('pre');
+      raw.className='document-text-page__raw';
+      raw.setAttribute('aria-label','Texto derivado de origem');
+      raw.textContent=page.raw_text;
+      article.append(rawLabel,raw);
+    }
+    if(page.reviewed_text!==null&&page.reviewed_text!==undefined){
+      const reviewed=document.createElement('div');
+      reviewed.className='document-text-page__reviewed';
+      reviewed.textContent='Texto revisado\n'+page.reviewed_text;
+      article.appendChild(reviewed);
+    }
+    if(page.status==='failed'){
+      const error=document.createElement('div');
+      error.className='document-text-page__error';
+      error.textContent='Falha: '+(page.error_code||page.error_detail||'texto não obtido');
+      article.appendChild(error);
+    }
+
+    const review=document.createElement('div');
+    review.className='document-text-review';
+    const openReview=document.createElement('button');
+    openReview.type='button';
+    openReview.textContent='Revisar texto';
+    review.appendChild(openReview);
+
+    openReview.addEventListener('click',()=>{
+      openReview.hidden=true;
+      const textarea=document.createElement('textarea');
+      textarea.value=page.reviewed_text??page.raw_text??'';
+      textarea.setAttribute('aria-label','Texto revisado da página '+page.page_number);
+      const actions=document.createElement('div');
+      actions.className='document-text-review__actions';
+      const save=document.createElement('button');
+      save.type='button';
+      save.textContent='Salvar revisão';
+      const cancel=document.createElement('button');
+      cancel.type='button';
+      cancel.textContent='Cancelar';
+      actions.append(save,cancel);
+      if(page.reviewed_text!==null&&page.reviewed_text!==undefined){
+        const clear=document.createElement('button');
+        clear.type='button';
+        clear.textContent='Limpar revisão';
+        clear.addEventListener('click',()=>saveDocumentTextReview(documentId,extraction.id,page.page_number,null,panel));
+        actions.appendChild(clear);
+      }
+      review.append(textarea,actions);
+      cancel.addEventListener('click',()=>{
+        textarea.remove();
+        actions.remove();
+        openReview.hidden=false;
+      });
+      save.addEventListener('click',()=>saveDocumentTextReview(documentId,extraction.id,page.page_number,textarea.value,panel));
+    });
+    article.appendChild(review);
+    pagesContainer.appendChild(article);
+  });
+}
+
+async function saveDocumentTextReview(documentId,extractionId,pageNumber,reviewedText,panel){
+  setDocumentTextStatus(panel,'Salvando revisão…');
+  try{
+    const response=await fetch(
+      documentTextEndpoint(documentId)+'/'+encodeURIComponent(extractionId)+'/pages/'+encodeURIComponent(pageNumber)+'/review',
+      {method:'PUT',headers:{'Accept':'application/json','Content-Type':'application/json'},body:JSON.stringify({reviewed_text:reviewedText})}
+    );
+    const payload=await response.json();
+    if(!response.ok)throw new Error(payload?.error||('Erro HTTP '+response.status));
+    const current=documentTextState.get(String(documentId));
+    const pageIndex=current.extraction.pages.findIndex(page=>page.page_number===pageNumber);
+    if(pageIndex>=0)current.extraction.pages[pageIndex]=payload.page;
+    renderDocumentText(documentId,current);
+    setDocumentTextStatus(panel,'Revisão salva.');
+  }catch(error){
+    setDocumentTextStatus(panel,error?.message||'Erro HTTP ao salvar revisão.',true);
+  }
+}
+
+async function loadDocumentText(documentId){
+  const panel=document.querySelector('[data-document-text-panel="'+documentId+'"]');
+  try{
+    const response=await fetch(documentTextEndpoint(documentId),{headers:{'Accept':'application/json'}});
+    const payload=await response.json();
+    if(!response.ok)throw new Error(payload?.error||('Erro HTTP '+response.status));
+    renderDocumentText(documentId,payload);
+  }catch(error){
+    if(panel){
+      panel.hidden=false;
+      setDocumentTextStatus(panel,error?.message||'Erro HTTP ao consultar texto.',true);
+    }
+  }
+}
+
+async function requestDocumentText(trigger){
+  const documentId=trigger.dataset.documentTextTrigger;
+  const panel=document.querySelector('[data-document-text-panel="'+documentId+'"]');
+  panel.hidden=false;
+  trigger.disabled=true;
+  setDocumentTextStatus(panel,'Processando…');
+  try{
+    const response=await fetch(
+      documentTextEndpoint(documentId),
+      {method:'POST',headers:{'Accept':'application/json','Content-Type':'application/json'},body:'{}'}
+    );
+    const payload=await response.json();
+    if(!response.ok)throw new Error(payload?.error||('Erro HTTP '+response.status));
+    renderDocumentText(documentId,payload);
+  }catch(error){
+    setDocumentTextStatus(panel,error?.message||'Erro HTTP ao obter texto.',true);
+  }finally{
+    trigger.disabled=false;
+  }
+}
+
+documentTextTriggers.forEach(trigger=>{
+  trigger.addEventListener('click',()=>requestDocumentText(trigger));
+  if(!trigger.disabled)loadDocumentText(trigger.dataset.documentTextTrigger);
+});
 
 // UX02A_POOL_INVENTORY_V1
 const poolInventorySearch=document.getElementById('pool-inventory-search');
