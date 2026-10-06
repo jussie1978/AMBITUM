@@ -108,14 +108,22 @@ def main() -> None:
 
         storage = LocalCaseStorage(storage_root)
         calls = 0
+        ocr_calls = 0
         real_executor = document_text_service.extract_native_pdf
+        real_ocr = document_text_service.extract_ocr_image
 
         def counting_executor(source_path: Path):
             nonlocal calls
             calls += 1
             return real_executor(source_path)
 
+        def forbidden_ocr(_image):
+            nonlocal ocr_calls
+            ocr_calls += 1
+            raise AssertionError("OCR must not run for a fully digital PDF")
+
         document_text_service.extract_native_pdf = counting_executor
+        document_text_service.extract_ocr_image = forbidden_ocr
         try:
             first = execute_native_text_extraction(db, storage=storage, case_ref="NATIVE-A", document_id=digital.id, extraction_profile="native-v1")
             assert first.reused is False and first.text_obtained is True
@@ -124,20 +132,15 @@ def main() -> None:
             assert first.extraction.engine == "pypdf"
             assert first.extraction.engine_version
             assert [page.page_number for page in first.extraction.pages] == [1, 2]
+            assert all(page.executor_type == "native" for page in first.extraction.pages)
+            assert all(page.status == "ready" for page in first.extraction.pages)
             db.commit()
 
             second = execute_native_text_extraction(db, storage=storage, case_ref="NATIVE-A", document_id=digital.id, extraction_profile="native-v1")
             assert second.reused is True
             assert second.extraction.id == first.extraction.id
             assert calls == 1
-
-            empty = execute_native_text_extraction(db, storage=storage, case_ref="NATIVE-A", document_id=blank.id, extraction_profile="native-v1")
-            assert empty.text_obtained is False
-            assert empty.extraction.status == "failed"
-            assert empty.extraction.error_code == "native_text_not_obtained"
-            assert empty.extraction.error_detail == "no_text_content"
-            assert empty.extraction.executor_type == "native"
-            db.commit()
+            assert ocr_calls == 0
 
             calls_before_rejection = calls
             extraction_count = db.query(DocumentTextExtraction).count()
@@ -151,6 +154,7 @@ def main() -> None:
             assert db.query(DocumentTextExtraction).count() == extraction_count
         finally:
             document_text_service.extract_native_pdf = real_executor
+            document_text_service.extract_ocr_image = real_ocr
 
         try:
             execute_native_text_extraction(db, storage=storage, case_ref="NATIVE-A", document_id=foreign.id, extraction_profile="native-v1")

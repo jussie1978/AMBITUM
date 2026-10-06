@@ -31,8 +31,8 @@ from app.services.document_text_service import (
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-PREVIOUS_HEAD = "0011_pr02_smart_metadata"
-CURRENT_HEAD = "0014_pr03_document_text"
+PREVIOUS_HEAD = "0014_pr03_document_text"
+CURRENT_HEAD = "0015_pr03_page_provenance"
 
 
 def _python() -> str:
@@ -59,12 +59,47 @@ def _alembic(data_dir: Path, *args: str) -> str:
 
 def _migration_smoke(root: Path) -> None:
     root.mkdir(parents=True)
-    _alembic(root, "upgrade", CURRENT_HEAD)
+    _alembic(root, "upgrade", PREVIOUS_HEAD)
     db_path = root / "athena.db"
+    with closing(sqlite3.connect(db_path)) as db:
+        case_id = db.execute(
+            "INSERT INTO shared_cases (case_ref, title, status, published_by, published_at, published_version) VALUES (?, ?, ?, ?, ?, ?)",
+            ("MIGRATION", "Migration", "aberto", "smoke", "2026-10-06", 1),
+        ).lastrowid
+        document_id = db.execute(
+            "INSERT INTO shared_documents (shared_case_id, filename, file_type, sha256, storage_relpath) VALUES (?, ?, ?, ?, ?)",
+            (case_id, "legacy.pdf", "pdf", "d" * 64, "legacy.pdf"),
+        ).lastrowid
+        extraction_id = db.execute(
+            "INSERT INTO document_text_extractions (shared_case_id, shared_document_id, source_sha256, capability, extraction_profile, status, executor_type, engine, engine_version, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (case_id, document_id, "d" * 64, "document.extract_text", "legacy", "ready", "native", "pypdf", "5.9.0", "2026-10-06"),
+        ).lastrowid
+        db.execute(
+            "INSERT INTO document_text_pages (extraction_id, page_number, raw_text) VALUES (?, ?, ?)",
+            (extraction_id, 1, "legacy text"),
+        )
+        failed_extraction_id = db.execute(
+            "INSERT INTO document_text_extractions (shared_case_id, shared_document_id, source_sha256, capability, extraction_profile, status, executor_type, engine, engine_version, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (case_id, document_id, "d" * 64, "document.extract_text", "legacy-failed", "failed", "ocr", "rapidocr-onnxruntime", "3.9.2", "2026-10-06"),
+        ).lastrowid
+        db.execute(
+            "INSERT INTO document_text_pages (extraction_id, page_number, raw_text) VALUES (?, ?, ?)",
+            (failed_extraction_id, 1, ""),
+        )
+        db.commit()
+
+    _alembic(root, "upgrade", CURRENT_HEAD)
     with closing(sqlite3.connect(db_path)) as db:
         assert db.execute("SELECT version_num FROM alembic_version").fetchone()[0] == CURRENT_HEAD
         tables = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
         assert {"document_text_extractions", "document_text_pages"}.issubset(tables)
+        legacy = db.execute(
+            "SELECT raw_text, executor_type, engine, engine_version, status, error_code, fallback_candidate FROM document_text_pages ORDER BY id"
+        ).fetchall()
+        assert legacy == [
+            ("legacy text", "native", "pypdf", "5.9.0", "ready", None, None),
+            ("", "ocr", "rapidocr-onnxruntime", "3.9.2", "failed", None, None),
+        ]
 
     engine = create_engine(f"sqlite:///{db_path}")
     inspector = inspect(engine)
@@ -77,7 +112,11 @@ def _migration_smoke(root: Path) -> None:
         "ck_document_text_extractions_executor_type",
         "ck_document_text_extractions_status",
     }
-    assert "ck_document_text_pages_page_number" in page_checks
+    assert {
+        "ck_document_text_pages_page_number",
+        "ck_document_text_pages_executor_type",
+        "ck_document_text_pages_status",
+    }.issubset(page_checks)
     assert "uq_document_text_pages_extraction_page" in page_uniques
     assert {
         "ix_document_text_extractions_shared_case_id",
@@ -88,9 +127,9 @@ def _migration_smoke(root: Path) -> None:
 
     _alembic(root, "downgrade", PREVIOUS_HEAD)
     with closing(sqlite3.connect(db_path)) as db:
-        tables = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-        assert "document_text_extractions" not in tables
-        assert "document_text_pages" not in tables
+        columns = {row[1] for row in db.execute("PRAGMA table_info(document_text_pages)")}
+        assert "executor_type" not in columns
+        assert db.execute("SELECT COUNT(*) FROM document_text_pages").fetchone()[0] == 2
     _alembic(root, "upgrade", CURRENT_HEAD)
 
 
@@ -98,6 +137,7 @@ def _assert_no_disallowed_engine_integration() -> None:
     source_paths = (
         REPO_ROOT / "app" / "services" / "document_text_service.py",
         REPO_ROOT / "app" / "services" / "document_text_native_executor.py",
+        REPO_ROOT / "app" / "services" / "document_text_ocr_executor.py",
     )
     trees = [ast.parse(path.read_text(encoding="utf-8")) for path in source_paths]
     imported_modules = {
@@ -112,7 +152,7 @@ def _assert_no_disallowed_engine_integration() -> None:
         if isinstance(node, ast.Import)
         for alias in node.names
     }
-    forbidden = {"openai", "pytesseract", "fitz", "ollama", "transformers"}
+    forbidden = {"openai", "pytesseract", "paddleocr", "tesseract", "ollama", "transformers"}
     assert not imported_modules.intersection(forbidden)
 
 
@@ -166,16 +206,29 @@ def _service_smoke(db_path: Path) -> None:
         except DocumentTextSourceUnavailable:
             pass
 
+    try:
+        stage_extraction(
+            db,
+            document=available,
+            extraction_profile="missing-page-provenance",
+            status="ready",
+            executor_type="native",
+            pages=[{"page_number": 1, "raw_text": "must not infer"}],
+        )
+        raise AssertionError("new page provenance was inferred from the parent")
+    except DocumentTextError:
+        pass
+
     current_sha = available.sha256
     old_sha = "0" * 64
     available.sha256 = old_sha
-    old = stage_extraction(db, document=available, extraction_profile="default-v1", status="ready", executor_type="native", pages=[{"page_number": 1, "raw_text": "old sha"}], completed_at=now)
+    old = stage_extraction(db, document=available, extraction_profile="default-v1", status="ready", executor_type="native", pages=[{"page_number": 1, "raw_text": "old sha", "executor_type": "native", "engine": "pypdf", "engine_version": "5.9.0", "status": "ready"}], completed_at=now)
     db.commit()
     assert old.source_sha256 == old_sha
 
     available.sha256 = current_sha
-    current = stage_extraction(db, document=available, extraction_profile="default-v1", status="ready", executor_type="native", pages=[{"page_number": 1, "raw_text": "raw", "reviewed_text": "reviewed"}], completed_at=now)
-    stage_extraction(db, document=available, extraction_profile="other-profile", status="ready", executor_type="native", pages=[{"page_number": 1, "raw_text": "other"}], completed_at=now)
+    current = stage_extraction(db, document=available, extraction_profile="default-v1", status="ready", executor_type="native", pages=[{"page_number": 1, "raw_text": "raw", "executor_type": "native", "engine": "pypdf", "engine_version": "5.9.0", "status": "ready", "reviewed_text": "reviewed"}], completed_at=now)
+    stage_extraction(db, document=available, extraction_profile="other-profile", status="ready", executor_type="native", pages=[{"page_number": 1, "raw_text": "other", "executor_type": "native", "engine": "pypdf", "engine_version": "5.9.0", "status": "ready"}], completed_at=now)
     db.commit()
 
     reusable = find_latest_reusable_extraction(db, document=available, extraction_profile="default-v1")
@@ -192,8 +245,8 @@ def _service_smoke(db_path: Path) -> None:
         extraction_profile="duplicate-test", status="processing",
         executor_type="native", created_at=now,
         pages=[
-            DocumentTextPage(page_number=1, raw_text="first"),
-            DocumentTextPage(page_number=1, raw_text="duplicate"),
+            DocumentTextPage(page_number=1, raw_text="first", executor_type="native", engine="pypdf", engine_version="5.9.0", status="ready"),
+            DocumentTextPage(page_number=1, raw_text="duplicate", executor_type="native", engine="pypdf", engine_version="5.9.0", status="ready"),
         ],
     )
     db.add(duplicate)
@@ -208,8 +261,8 @@ def _service_smoke(db_path: Path) -> None:
 
 
 def main() -> None:
-    migration_path = REPO_ROOT / "alembic" / "versions" / "0014_pr03_document_text.py"
-    assert 'down_revision = "0011_pr02_smart_metadata"' in migration_path.read_text(encoding="utf-8")
+    migration_path = REPO_ROOT / "alembic" / "versions" / "0015_pr03_page_provenance.py"
+    assert 'down_revision = "0014_pr03_document_text"' in migration_path.read_text(encoding="utf-8")
     _assert_no_disallowed_engine_integration()
     with tempfile.TemporaryDirectory(prefix="circe-pr03-derived-") as tmp:
         root = Path(tmp)
@@ -218,7 +271,7 @@ def main() -> None:
     print("PR-03 DERIVED CONTENT SERVICE SMOKE: OK")
     print("models/constraints=ok; case/source isolation=ok; reuse fingerprint/profile=ok")
     print("raw/reviewed separation=ok; duplicate page rejected=ok; engine integrations=absent")
-    print("migration=0011->0014/downgrade/re-upgrade on isolated temporary database")
+    print("migration=0014->0015/backfill/downgrade/re-upgrade on isolated temporary database")
 
 
 if __name__ == "__main__":

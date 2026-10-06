@@ -23,7 +23,7 @@ class DocumentTextExtraction(Base):
             name="ck_document_text_extractions_status",
         ),
         CheckConstraint(
-            "executor_type IN ('native', 'ocr', 'vlm')",
+            "executor_type IN ('native', 'ocr', 'vlm', 'mixed')",
             name="ck_document_text_extractions_executor_type",
         ),
         Index("ix_document_text_extractions_shared_case_id", "shared_case_id"),
@@ -76,6 +76,14 @@ class DocumentTextPage(Base):
     __tablename__ = "document_text_pages"
     __table_args__ = (
         CheckConstraint("page_number >= 1", name="ck_document_text_pages_page_number"),
+        CheckConstraint(
+            "executor_type IN ('native', 'ocr', 'vlm')",
+            name="ck_document_text_pages_executor_type",
+        ),
+        CheckConstraint(
+            "status IN ('ready', 'failed')",
+            name="ck_document_text_pages_status",
+        ),
         UniqueConstraint(
             "extraction_id",
             "page_number",
@@ -90,6 +98,13 @@ class DocumentTextPage(Base):
         nullable=False,
     )
     page_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    executor_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    engine: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    engine_version: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    error_code: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    error_detail: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    fallback_candidate: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
     raw_text: Mapped[str] = mapped_column(Text, nullable=False)
     reviewed_text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     reviewed_by_operator_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
