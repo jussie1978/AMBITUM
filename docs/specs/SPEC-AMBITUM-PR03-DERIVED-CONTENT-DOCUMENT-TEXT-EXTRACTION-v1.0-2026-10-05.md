@@ -1,13 +1,13 @@
 # SPEC-AMBITUM-PR03 — Derived Content Foundation + Document Text Extraction
 
 **Versão:** 1.0
-**Data:** 05/10/2026
-**Estado:** DESIGN APPROVED / IMPLEMENTATION NEXT
+**Data:** 06/10/2026
+**Estado:** DONE / TECHNICAL AND OPERATIONAL VALIDATION COMPLETE
 **Projeto:** CIRCE AMBITUM
 **Unidade:** PR-03
 **Autoridade arquitetural:** `ADR-AMBITUM-PR03-001-CAPABILITY-HARNESS-v1.0-2026-10-05.md`
 **Pré-requisito:** PR-02 DONE
-**Baseline observada:** `main` / `origin/main` no merge da PR #2, commit abreviado `315418e`
+**Baseline de fechamento:** branch `feat/pr03-derived-content-text-extraction`, commit abreviado `e29a5d7`
 **Substitui conceitualmente:** escopo anterior “OCR + Derived Text” do roadmap v1.3
 
 ---
@@ -101,16 +101,18 @@ Quando PDF/documento possuir camada textual utilizável, preferir extração det
 
 Não executar OCR/VLM sem necessidade quando o texto nativo satisfizer a capability.
 
+Implementação concluída com pypdf, examinando o texto nativo por página e preservando erro técnico real do parser como erro, sem mascará-lo como documento escaneado.
+
 ### 4.4. OCR local
 
 Quando não houver texto nativo utilizável, executar OCR local adequado ao tipo de documento suportado.
 
-A escolha de biblioteca é decisão de implementação, desde que:
+A implementação concluída usa RapidOCR local com ONNX Runtime. O executor:
 
-- seja encapsulada como executor;
-- não altere o contrato da capability;
-- exponha falha de modo observável;
-- permita registrar engine/versão quando disponível.
+- permanece encapsulado;
+- não altera o contrato da capability;
+- expõe falha de modo observável;
+- registra engine/versão quando disponível.
 
 ### 4.5. VLM local fallback
 
@@ -127,7 +129,9 @@ Quando o resultado for apenas ambíguo/insatisfatório, sem falha objetiva, o si
 
 Solicitação explícita do operador também pode autorizar o fallback.
 
-Qwen ou outro VLM é candidato de implementação; nenhum modelo específico é requisito arquitetural desta SPEC.
+O fallback implementado usa o contrato local OpenAI-compatible do servidor llama.cpp, configurado para `Qwen/Qwen3-VL-8B-Instruct-GGUF:Q4_K_M`. Nenhum conteúdo é enviado a cloud, OpenAI ou Ollama.
+
+A execução contra o modelo Qwen3-VL real permanece pendente de validação operacional quando servidor e modelo estiverem instalados. O routing e o contrato possuem smoke determinístico com servidor HTTP fake.
 
 ---
 
@@ -161,6 +165,13 @@ Cada página deve conseguir representar:
 page_number
 raw_text
 reviewed_text?
+executor_type
+engine?
+engine_version?
+status
+error_code?
+error_detail?
+fallback_candidate?
 ```
 
 Regras:
@@ -212,6 +223,8 @@ native
 ocr
 vlm
 ```
+
+Quando páginas de uma mesma extração usam executores diferentes, a extração pai registra `mixed`; a proveniência real permanece em cada página.
 
 A implementação pode armazenar detalhes adicionais sem expô-los como configuração obrigatória ao operador.
 
@@ -306,6 +319,8 @@ A interface deve permitir perceber:
 
 Não exigir seleção manual de engine.
 
+A API e a UI mínima foram entregues com obtenção/consulta, resultado por página, indicação de origem, acesso ao Original e revisão humana auditada. Essa UI é somente uma superfície funcional provisória; o novo shell de produto pertence ao ciclo posterior **AMBITUM PRODUCT SHELL V1**.
+
 ---
 
 ## 11. Segurança e isolamento
@@ -325,7 +340,10 @@ Obrigatório:
 
 ## 12. Persistência e migration
 
-A implementação poderá criar migration aditiva para suportar Derived Document Text.
+A implementação criou migrations aditivas para suportar Derived Document Text:
+
+- `0014_pr03_document_text` — extrações e páginas;
+- `0015_pr03_page_provenance` — proveniência individual por página e executor pai `mixed`.
 
 A migration deve:
 
@@ -336,6 +354,8 @@ A migration deve:
 - manter Case isolation explícito.
 
 A definição física final deve ser revista contra os modelos existentes antes do patch.
+
+O banco operacional foi protegido por backup verificado, ensaiado em cópia isolada e migrado com sucesso até `0015_pr03_page_provenance`, preservando tabelas e contagens canônicas.
 
 ---
 
@@ -464,6 +484,8 @@ Além disso:
 
 Teste técnico aprovado não substitui confirmação de ganho operacional.
 
+Estado de fechamento: aceite técnico e operacional concluído para a superfície mínima da PR-03. Os smokes fundacional, native, OCR/mixed, VLM fallback, HTTP e UI passaram; o teste com Qwen3-VL real fica registrado como validação operacional futura.
+
 ---
 
 ## 17. Fora de escopo
@@ -510,6 +532,7 @@ Parar e reavaliar antes de ampliar se a implementação começar a exigir:
 
 Após PR-03:
 
+- **AMBITUM PRODUCT SHELL V1** será o próximo ciclo, substituindo em unidade própria a superfície funcional provisória desta PR;
 - PR-04 Evidence Retrieval poderá consumir Derived Document Text;
 - PR-04 poderá solicitar `document.extract_text` quando necessário, sem implementar OCR dentro de retrieval;
 - PR-06 Mesa/IA poderá invocar a mesma capability;
