@@ -22,6 +22,7 @@ from app.services.document_text_service import (
     DocumentTextNotFound,
     execute_document_text_extraction,
 )
+from app.services.document_text_vlm_executor import VLMTextResult
 from app.services.storage_service import LocalCaseStorage
 
 
@@ -155,14 +156,27 @@ def main() -> None:
 
         storage = LocalCaseStorage(storage_root)
         real_ocr = document_text_service.extract_ocr_image
+        real_vlm = document_text_service.extract_vlm_image
         ocr_calls = 0
+        vlm_calls = 0
 
         def counting_ocr(image):
             nonlocal ocr_calls
             ocr_calls += 1
             return real_ocr(image)
 
+        def empty_vlm(_image):
+            nonlocal vlm_calls
+            vlm_calls += 1
+            return VLMTextResult(
+                raw_text="",
+                text_obtained=False,
+                engine="qwen3-vl",
+                engine_version="smoke-model",
+            )
+
         document_text_service.extract_ocr_image = counting_ocr
+        document_text_service.extract_vlm_image = empty_vlm
         try:
             digital_result = execute_document_text_extraction(db, storage=storage, case_ref="OCR-A", document_id=native.id, extraction_profile="ocr-v1")
             assert digital_result.extraction.executor_type == "native"
@@ -198,16 +212,19 @@ def main() -> None:
             blank_page = blank_result.extraction.pages[0]
             assert blank_result.extraction.status == "failed"
             assert blank_page.status == "failed"
-            assert blank_page.error_code == "ocr_text_not_obtained"
-            assert blank_page.fallback_candidate == "vlm"
-            assert blank_result.fallback_candidate == "vlm"
+            assert blank_page.executor_type == "vlm"
+            assert blank_page.error_code == "vlm_text_not_obtained"
+            assert blank_page.fallback_candidate is None
+            assert blank_result.fallback_candidate is None
 
             partial_result = execute_document_text_extraction(db, storage=storage, case_ref="OCR-A", document_id=mixed_blank.id, extraction_profile="ocr-v1")
             assert partial_result.extraction.executor_type == "mixed"
             assert partial_result.extraction.status == "failed"
             assert [page.status for page in partial_result.extraction.pages] == ["ready", "failed"]
             assert partial_result.extraction.pages[0].raw_text.strip()
-            assert partial_result.extraction.pages[1].fallback_candidate == "vlm"
+            assert partial_result.extraction.pages[1].executor_type == "vlm"
+            assert partial_result.extraction.pages[1].error_code == "vlm_text_not_obtained"
+            assert vlm_calls == 2
 
             calls_before_corrupt = ocr_calls
             corrupt_result = execute_document_text_extraction(db, storage=storage, case_ref="OCR-A", document_id=corrupt.id, extraction_profile="ocr-v1")
@@ -223,6 +240,7 @@ def main() -> None:
                 pass
         finally:
             document_text_service.extract_ocr_image = real_ocr
+            document_text_service.extract_vlm_image = real_vlm
 
         assert all(path.read_bytes() == content for path, content in originals.items())
         db.close()
@@ -230,7 +248,7 @@ def main() -> None:
 
     print("PR-03 OCR/MIXED SMOKE: OK")
     print("digital/native; scan+png+jpeg/ocr; mixed/page-provenance; reuse=ok")
-    print("empty/vlm-candidate; parser-error-not-masked; isolation/original=ok")
+    print("empty/vlm-routing; parser-error-not-masked; isolation/original=ok")
 
 
 if __name__ == "__main__":

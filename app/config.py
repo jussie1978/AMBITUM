@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     llm_base_url: str = "http://localhost:1234/v1"
     llm_model: str = "deepseek-r1-distill-qwen-14b"
     embedding_model: str = "text-embedding-nomic-embed-text-v1.5"
+    vlm_base_url: str = "http://127.0.0.1:8080/v1"
+    vlm_model: str = "Qwen/Qwen3-VL-8B-Instruct-GGUF:Q4_K_M"
+    vlm_timeout_seconds: float = 120.0
 
     model_config = {
         "env_file": ".env",

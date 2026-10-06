@@ -14,6 +14,7 @@ from typing import Iterable, Mapping
 from PIL import Image
 from sqlalchemy.orm import Session, selectinload
 
+from app.config import settings
 from app.models.derived_content import DocumentTextExtraction, DocumentTextPage
 from app.models.platea import SharedCase, SharedDocument
 from app.services.document_text_native_executor import (
@@ -28,6 +29,11 @@ from app.services.document_text_ocr_executor import (
     OCRExecutionError,
     PARAMETERS_JSON as OCR_PARAMETERS_JSON,
     extract_ocr_image,
+)
+from app.services.document_text_vlm_executor import (
+    ENGINE_NAME as VLM_ENGINE_NAME,
+    VLMExecutionError,
+    extract_vlm_image,
 )
 from app.services.storage_service import LocalCaseStorage
 
@@ -520,6 +526,48 @@ def _ocr_page(image: Image.Image, *, page_number: int) -> dict[str, object]:
     }
 
 
+def _vlm_page(image: Image.Image, *, page_number: int) -> dict[str, object]:
+    try:
+        result = extract_vlm_image(image)
+    except VLMExecutionError as exc:
+        return {
+            "page_number": page_number,
+            "executor_type": "vlm",
+            "engine": VLM_ENGINE_NAME,
+            "engine_version": settings.vlm_model,
+            "status": "failed",
+            "raw_text": "",
+            "error_code": exc.code,
+            "error_detail": str(exc),
+        }
+    if result.text_obtained:
+        return {
+            "page_number": page_number,
+            "executor_type": "vlm",
+            "engine": result.engine,
+            "engine_version": result.engine_version,
+            "status": "ready",
+            "raw_text": result.raw_text,
+        }
+    return {
+        "page_number": page_number,
+        "executor_type": "vlm",
+        "engine": result.engine,
+        "engine_version": result.engine_version,
+        "status": "failed",
+        "raw_text": "",
+        "error_code": "vlm_text_not_obtained",
+        "error_detail": "no_text_content",
+    }
+
+
+def _ocr_then_vlm_page(image: Image.Image, *, page_number: int) -> dict[str, object]:
+    page = _ocr_page(image, page_number=page_number)
+    if page.get("fallback_candidate") != "vlm":
+        return page
+    return _vlm_page(image, page_number=page_number)
+
+
 def execute_document_text_extraction(
     db: Session,
     *,
@@ -588,7 +636,11 @@ def execute_document_text_extraction(
             try:
                 rendered = _render_pdf_page(source_path, native_page.page_number)
                 try:
-                    pages.append(_ocr_page(rendered, page_number=native_page.page_number))
+                    pages.append(
+                        _ocr_then_vlm_page(
+                            rendered, page_number=native_page.page_number
+                        )
+                    )
                 finally:
                     rendered.close()
             except Exception as exc:
@@ -608,7 +660,7 @@ def execute_document_text_extraction(
         try:
             with Image.open(source_path) as source_image:
                 source_image.load()
-                pages.append(_ocr_page(source_image, page_number=1))
+                pages.append(_ocr_then_vlm_page(source_image, page_number=1))
         except Exception as exc:
             pages.append(
                 {
