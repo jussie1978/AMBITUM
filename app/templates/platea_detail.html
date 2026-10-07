@@ -42,31 +42,48 @@
 .activity-summary__item:last-child{border-right:0}
 .activity-summary__value{font-size:23px;font-weight:650}
 .activity-summary__label{margin-top:4px;color:var(--text-tertiary);font-size:12px}
-.materials-layout{display:grid;grid-template-columns:minmax(280px,34%) minmax(0,1fr);min-height:590px;border:1px solid var(--border-subtle);border-radius:6px;overflow:hidden;background:var(--bg-elevated)}
-.materials-list{border-right:1px solid var(--border-subtle);background:#1d1e23}
-.materials-list__head{padding:17px 18px;border-bottom:1px solid var(--border-subtle)}
+.case-canvas--materials{max-width:none;height:calc(100vh - var(--header-height) - 145px - var(--statusbar-height));min-height:600px;padding:18px 22px 22px}
+.materials-layout{display:grid;grid-template-columns:270px minmax(0,1fr);height:100%;min-height:0;border:1px solid var(--border-subtle);border-radius:6px;overflow:hidden;background:var(--bg-elevated)}
+.materials-list{display:grid;grid-template-rows:auto 1fr;min-width:0;min-height:0;border-right:1px solid var(--border-subtle);background:#1d1e23}
+.materials-list__head{padding:15px 16px;border-bottom:1px solid var(--border-subtle)}
 .materials-list__title{font-size:15px;font-weight:650}
 .materials-list__meta{margin-top:4px;color:var(--text-tertiary);font-size:11px}
-.material-item{width:100%;display:block;padding:15px 18px;border:0;border-bottom:1px solid rgba(44,46,56,.7);background:transparent;color:inherit;text-align:left;cursor:pointer}
+.materials-list__body{min-height:0;overflow:auto}
+.material-item{width:100%;display:block;padding:13px 16px;border:0;border-bottom:1px solid rgba(44,46,56,.7);background:transparent;color:inherit;text-align:left;cursor:pointer}
 .material-item:hover{background:var(--bg-hover)}
-.material-item.active{background:var(--accent-soft);box-shadow:inset 2px 0 var(--accent)}
+.material-item.active{background:var(--accent-soft);box-shadow:inset 3px 0 var(--accent)}
 .material-item__name{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:600}
 .material-item__meta{display:flex;gap:8px;margin-top:7px;color:var(--text-tertiary);font-family:var(--font-mono);font-size:9px;text-transform:uppercase}
 .material-item__state{color:var(--success)}
 .material-empty{padding:24px 18px;color:var(--text-tertiary);font-size:13px}
-.document-stage{min-width:0;padding:24px 26px;background:var(--bg-base)}
+.document-stage{min-width:0;min-height:0;background:var(--bg-base)}
 .document-empty{height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-tertiary);font-size:14px}
 .document-detail[hidden]{display:none}
-.document-detail__eyebrow{color:var(--accent);font-family:var(--font-mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase}
-.document-detail h2{margin-top:7px;font-size:21px;line-height:1.25;font-weight:650;overflow-wrap:anywhere}
-.document-detail__meta{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:10px;color:var(--text-tertiary);font-size:12px}
-.document-actions{display:flex;gap:9px;margin-top:19px;padding-bottom:20px;border-bottom:1px solid var(--border-subtle)}
+.document-detail{height:100%;min-height:0;display:grid;grid-template-rows:auto auto 1fr}
+.document-detail__header{display:flex;align-items:center;gap:18px;min-width:0;padding:12px 16px;border-bottom:1px solid var(--border-subtle);background:#202126}
+.document-detail__identity{min-width:0;flex:1}
+.document-detail__eyebrow{color:var(--accent);font-family:var(--font-mono);font-size:8px;letter-spacing:.1em;text-transform:uppercase}
+.document-detail h2{margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px;line-height:1.25;font-weight:650}
+.document-detail__meta{display:flex;flex-wrap:wrap;gap:5px 13px;margin-top:5px;color:var(--text-tertiary);font-size:10px}
+.document-actions{display:flex;gap:8px;flex:0 0 auto}
 .document-action{min-height:36px;padding:8px 13px;border:1px solid var(--border-strong);border-radius:4px;background:transparent;color:var(--text-secondary);font-size:13px;font-weight:600;cursor:pointer}
 .document-action:hover{border-color:var(--accent);color:var(--accent)}
 .document-action--primary{border-color:var(--accent);background:var(--accent);color:#10171b}
 .document-action--primary:hover{color:#10171b;opacity:.9}
 .document-action:disabled{opacity:.4;cursor:not-allowed}
-.document-text-panel{margin-top:20px}
+.document-workspace{display:grid;grid-template-columns:minmax(360px,1.45fr) minmax(330px,.85fr);min-width:0;min-height:0}
+.document-pane{display:grid;grid-template-rows:auto 1fr;min-width:0;min-height:0}
+.document-pane+.document-pane{border-left:1px solid var(--border-subtle)}
+.document-pane__head{display:flex;align-items:center;justify-content:space-between;height:40px;padding:0 14px;border-bottom:1px solid var(--border-subtle);background:#1d1e23;color:var(--text-secondary);font-size:11px;font-weight:650;letter-spacing:.04em;text-transform:uppercase}
+.document-pane__body{position:relative;min-height:0;overflow:auto;background:#151619}
+.document-original-frame{display:block;width:100%;height:100%;min-height:460px;border:0;background:#2a2b30}
+.document-original-fallback{height:100%;min-height:320px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:28px;text-align:center;color:var(--text-secondary)}
+.document-original-fallback strong{font-size:14px;color:var(--text-primary)}
+.document-original-fallback span{max-width:360px;font-size:12px;line-height:1.5;color:var(--text-tertiary)}
+.document-view-tabs{display:none;gap:4px;padding:0 12px;border-bottom:1px solid var(--border-subtle);background:#191a1e}
+.document-view-tab{padding:9px 12px;border:0;border-bottom:2px solid transparent;background:transparent;color:var(--text-tertiary);font:inherit;font-size:11px;font-weight:650;cursor:pointer}
+.document-view-tab.active{border-bottom-color:var(--accent);color:var(--accent)}
+.document-text-panel{padding:12px 14px 22px}
 .document-text-status{padding:10px 12px;border-left:2px solid var(--accent);background:var(--accent-soft);color:var(--text-secondary);font-size:13px}
 .document-text-status.is-error{border-left-color:var(--error);background:var(--error-soft);color:var(--error)}
 .document-text-page{margin-top:16px;border:1px solid var(--border-subtle);border-radius:5px;background:var(--bg-elevated);overflow:hidden}
@@ -76,13 +93,15 @@
 .document-text-page__source-label{margin-bottom:6px;color:var(--text-tertiary);font-size:11px;font-weight:600}
 .document-text-page__raw{max-height:310px;overflow:auto;white-space:pre-wrap;color:var(--text-secondary);font-family:var(--font-mono);font-size:12px;line-height:1.6}
 .document-text-page__reviewed{margin-top:13px;padding:12px;border-left:2px solid var(--success);background:var(--success-soft);white-space:pre-wrap;color:var(--text-primary);font-size:13px;line-height:1.55}
+.document-text-page__reviewed-label{margin-bottom:7px;color:var(--success);font-size:11px;font-weight:650}
 .document-text-page__error{margin-top:10px;color:var(--error);font-size:12px}
 .document-text-review{margin-top:13px}
 .document-text-review textarea{width:100%;min-height:130px;margin-top:9px;padding:10px;border:1px solid var(--border-strong);border-radius:4px;background:var(--bg-base);color:var(--text-primary);font:13px/1.55 var(--font-mono);resize:vertical}
 .document-text-review__actions{display:flex;gap:8px;margin-top:8px}
 .document-text-review button{padding:7px 10px;border:1px solid var(--border-strong);border-radius:3px;background:transparent;color:var(--text-secondary);font-size:12px;cursor:pointer}
 .document-text-review button:hover{border-color:var(--accent);color:var(--accent)}
-@media(max-width:900px){.product-topbar__local,.product-topbar__operator{display:none}.case-header,.case-canvas{padding-left:20px;padding-right:20px}.overview-grid{grid-template-columns:1fr}.materials-layout{grid-template-columns:1fr}.materials-list{border-right:0;border-bottom:1px solid var(--border-subtle);max-height:280px;overflow:auto}.document-stage{min-height:480px}}
+@media(max-width:1450px){.case-canvas--materials{height:auto;min-height:650px}.materials-layout{grid-template-columns:250px minmax(0,1fr);height:calc(100vh - var(--header-height) - 170px - var(--statusbar-height));min-height:610px}.document-view-tabs{display:flex}.document-workspace{display:block}.document-pane{height:100%}.document-pane[data-document-pane][hidden]{display:none}.document-pane+.document-pane{border-left:0}.document-original-frame{min-height:500px}}
+@media(max-width:900px){.product-topbar__local,.product-topbar__operator{display:none}.case-header,.case-canvas{padding-left:20px;padding-right:20px}.overview-grid{grid-template-columns:1fr}.case-canvas--materials{height:auto;min-height:0;padding:14px}.materials-layout{grid-template-columns:1fr;height:auto;min-height:0}.materials-list{height:230px;border-right:0;border-bottom:1px solid var(--border-subtle)}.document-stage{height:620px}.document-detail__header{align-items:flex-start;flex-direction:column;gap:10px}.document-actions{width:100%}.document-action{flex:1;text-align:center}.document-original-frame{min-height:460px}}
 </style>
 
 <div class="app-layout">
@@ -116,7 +135,7 @@
       </nav>
     </section>
 
-    <main class="case-canvas">
+    <main class="case-canvas{% if active_view == 'materials' %} case-canvas--materials{% endif %}">
       {% if active_view == 'materials' %}
       <section class="materials-layout" aria-label="Materiais do Caso">
         <aside class="materials-list">
@@ -124,8 +143,9 @@
             <div class="materials-list__title">Documentos</div>
             <div class="materials-list__meta">{{ documents|length }} documento(s) no Caso</div>
           </div>
+          <div class="materials-list__body">
           {% for item in documents %}
-          <button class="material-item{% if loop.first %} active{% endif %}" type="button" data-material-select="{{ item.id }}">
+          <button class="material-item{% if loop.first %} active{% endif %}" type="button" data-material-select="{{ item.id }}" aria-pressed="{{ 'true' if loop.first else 'false' }}">
             <span class="material-item__name">{{ item.filename }}</span>
             <span class="material-item__meta">
               <span>{{ item.file_type or item.mime_type or 'documento' }}</span>
@@ -135,28 +155,57 @@
           {% else %}
           <div class="material-empty">Nenhum documento disponível neste Caso.</div>
           {% endfor %}
+          </div>
         </aside>
 
         <div class="document-stage">
           {% for item in documents %}
           <article class="document-detail" data-document-detail="{{ item.id }}"{% if not loop.first %} hidden{% endif %}>
+            <header class="document-detail__header">
+            <div class="document-detail__identity">
             <div class="document-detail__eyebrow">Documento selecionado</div>
             <h2>{{ item.filename }}</h2>
             <div class="document-detail__meta">
               <span>{{ item.file_type or item.mime_type or 'Tipo não informado' }}</span>
               {% if item.size_bytes is not none %}<span>{{ item.size_bytes }} bytes</span>{% endif %}
-              {% if item.document_ref %}<span>{{ item.document_ref }}</span>{% endif %}
               <span>{{ 'Original disponível' if item.physical_available else 'Somente metadados' }}</span>
+            </div>
             </div>
             <div class="document-actions">
               {% if item.physical_available %}
-              <a class="document-action" href="/api/documents/{{ item.id }}/original">Original</a>
+              <a class="document-action" href="/api/documents/{{ item.id }}/original" target="_blank" rel="noopener">Abrir original</a>
               {% endif %}
               <button class="document-action document-action--primary" type="button" data-document-text-trigger="{{ item.id }}"{% if not item.physical_available %} disabled{% endif %}>Obter texto</button>
             </div>
+            </header>
+            <div class="document-view-tabs" role="tablist" aria-label="Visualização do documento">
+              <button class="document-view-tab active" type="button" data-document-view="original" role="tab" aria-selected="true">Original</button>
+              <button class="document-view-tab" type="button" data-document-view="text" role="tab" aria-selected="false">Texto / Revisão</button>
+            </div>
+            <div class="document-workspace">
+              <section class="document-pane" data-document-pane="original" aria-label="Original do documento">
+                <div class="document-pane__head"><span>Original / Documento</span></div>
+                <div class="document-pane__body">
+                  {% set can_inline_preview = item.mime_type in ['application/pdf', 'image/png', 'image/jpeg'] %}
+                  {% if item.physical_available and can_inline_preview %}
+                  <iframe class="document-original-frame" title="Original: {{ item.filename }}" src="/api/documents/{{ item.id }}/original?disposition=inline" loading="lazy"></iframe>
+                  {% else %}
+                  <div class="document-original-fallback">
+                    <strong>Pré-visualização indisponível</strong>
+                    <span>{{ item.mime_type or item.file_type or 'Tipo não informado' }}{% if item.physical_available %}. Use Abrir original para consultar este material.{% else %}. O arquivo original não está disponível.{% endif %}</span>
+                  </div>
+                  {% endif %}
+                </div>
+              </section>
+              <section class="document-pane" data-document-pane="text" aria-label="Texto e revisão">
+                <div class="document-pane__head"><span>Texto / Revisão</span></div>
+                <div class="document-pane__body">
             <div class="document-text-panel" data-document-text-panel="{{ item.id }}">
               <div class="document-text-status" role="status" aria-live="polite">Sem extração.</div>
               <div class="document-text-pages"></div>
+            </div>
+                </div>
+              </section>
             </div>
           </article>
           {% else %}
@@ -203,12 +252,40 @@ const caseRef={{ case.case_ref|tojson }};
 const selectors=Array.from(document.querySelectorAll('[data-material-select]'));
 const details=Array.from(document.querySelectorAll('[data-document-detail]'));
 const documentTextState=new Map();
+const compactDocumentWorkspace=window.matchMedia('(max-width:1450px)');
 
-function selectDocument(documentId){
-  selectors.forEach(item=>item.classList.toggle('active',item.dataset.materialSelect===String(documentId)));
-  details.forEach(item=>{item.hidden=item.dataset.documentDetail!==String(documentId)});
+function setDocumentView(detail,view){
+  detail.querySelectorAll('[data-document-view]').forEach(tab=>{
+    const active=tab.dataset.documentView===view;
+    tab.classList.toggle('active',active);
+    tab.setAttribute('aria-selected',String(active));
+  });
+  detail.querySelectorAll('[data-document-pane]').forEach(pane=>{pane.hidden=compactDocumentWorkspace.matches&&pane.dataset.documentPane!==view});
 }
-selectors.forEach(item=>item.addEventListener('click',()=>selectDocument(item.dataset.materialSelect)));
+compactDocumentWorkspace.addEventListener('change',()=>details.forEach(detail=>{
+  const activeTab=detail.querySelector('[data-document-view].active');
+  setDocumentView(detail,activeTab?.dataset.documentView||'original');
+}));
+function selectDocument(documentId){
+  const targetId=String(documentId);
+  selectors.forEach(item=>{
+    const active=item.dataset.materialSelect===targetId;
+    item.classList.toggle('active',active);
+    item.setAttribute('aria-pressed',String(active));
+  });
+  details.forEach(item=>{item.hidden=item.dataset.documentDetail!==targetId});
+  const detail=details.find(item=>item.dataset.documentDetail===targetId);
+  if(!detail)return;
+  setDocumentView(detail,'original');
+  const trigger=detail.querySelector('[data-document-text-trigger]');
+  if(trigger&&!trigger.disabled&&!documentTextState.has(targetId))loadDocumentText(targetId);
+}
+selectors.forEach(item=>item.addEventListener('click',event=>{
+  event.preventDefault();
+  event.stopPropagation();
+  selectDocument(item.dataset.materialSelect);
+}));
+details.forEach(detail=>detail.querySelectorAll('[data-document-view]').forEach(tab=>tab.addEventListener('click',()=>setDocumentView(detail,tab.dataset.documentView))));
 
 function documentTextEndpoint(documentId){
   return '/api/cases/'+encodeURIComponent(caseRef)+'/documents/'+encodeURIComponent(documentId)+'/text-extraction';
@@ -232,6 +309,10 @@ function renderDocumentText(documentId,payload){
   if(!extraction){setDocumentTextStatus(panel,'Sem extração.');return;}
   const pages=Array.isArray(extraction.pages)?extraction.pages:[];
   const readyPages=pages.filter(page=>page.status==='ready').length;
+  const provenances=[...new Set(pages.map(page=>documentTextOrigin(page.executor_type)))];
+  const detail=document.querySelector('[data-document-detail="'+documentId+'"]');
+  const summaryStatus=detail?.querySelector('.document-detail__meta span:last-child');
+  if(summaryStatus)summaryStatus.textContent=(provenances.join(' + ')||documentTextOrigin(extraction.executor_type))+' / '+(payload.state||extraction.status||'desconhecido');
   if(payload.state==='processing')setDocumentTextStatus(panel,'Processando…');
   else if(payload.state==='ready')setDocumentTextStatus(panel,'Texto disponível.');
   else if(readyPages>0)setDocumentTextStatus(panel,'Extração parcial: há páginas com falha.',true);
@@ -244,12 +325,15 @@ function renderDocumentText(documentId,payload){
     head.append(pageLabel,origin);article.appendChild(head);
     const body=document.createElement('div');body.className='document-text-page__body';
     if(page.raw_text){
-      const rawLabel=document.createElement('div');rawLabel.className='document-text-page__source-label';rawLabel.textContent='Texto derivado (origem)';
-      const raw=document.createElement('pre');raw.className='document-text-page__raw';raw.setAttribute('aria-label','Texto derivado de origem');raw.textContent=page.raw_text;
+      const rawLabel=document.createElement('div');rawLabel.className='document-text-page__source-label';rawLabel.textContent='Texto extraído';
+      const raw=document.createElement('pre');raw.className='document-text-page__raw';raw.setAttribute('aria-label','Texto extraído');raw.textContent=page.raw_text;
       body.append(rawLabel,raw);
     }
     if(page.reviewed_text!==null&&page.reviewed_text!==undefined){
-      const reviewed=document.createElement('div');reviewed.className='document-text-page__reviewed';reviewed.textContent='Texto revisado\n'+page.reviewed_text;body.appendChild(reviewed);
+      const reviewed=document.createElement('div');reviewed.className='document-text-page__reviewed';
+      const reviewedLabel=document.createElement('div');reviewedLabel.className='document-text-page__reviewed-label';reviewedLabel.textContent='Texto revisado';
+      const reviewedText=document.createElement('div');reviewedText.textContent=page.reviewed_text;
+      reviewed.append(reviewedLabel,reviewedText);body.appendChild(reviewed);
     }
     if(page.status==='failed'){
       const error=document.createElement('div');error.className='document-text-page__error';error.textContent='Falha: '+(page.error_code||page.error_detail||'texto não obtido');body.appendChild(error);
@@ -285,11 +369,12 @@ async function loadDocumentText(documentId){
   catch(error){setDocumentTextStatus(panel,error?.message||'Erro HTTP ao consultar texto.',true)}
 }
 async function requestDocumentText(trigger){
-  const documentId=trigger.dataset.documentTextTrigger;const panel=document.querySelector('[data-document-text-panel="'+documentId+'"]');trigger.disabled=true;setDocumentTextStatus(panel,'Processando…');
+  const documentId=trigger.dataset.documentTextTrigger;const panel=document.querySelector('[data-document-text-panel="'+documentId+'"]');const detail=trigger.closest('[data-document-detail]');trigger.disabled=true;setDocumentView(detail,'text');setDocumentTextStatus(panel,'Processando…');
   try{const response=await fetch(documentTextEndpoint(documentId),{method:'POST',headers:{'Accept':'application/json','Content-Type':'application/json'},body:'{}'});const payload=await response.json();if(!response.ok)throw new Error(payload?.error||('Erro HTTP '+response.status));renderDocumentText(documentId,payload)}
   catch(error){setDocumentTextStatus(panel,error?.message||'Erro HTTP ao obter texto.',true)}finally{trigger.disabled=false}
 }
-document.querySelectorAll('[data-document-text-trigger]').forEach(trigger=>{trigger.addEventListener('click',()=>requestDocumentText(trigger));if(!trigger.disabled)loadDocumentText(trigger.dataset.documentTextTrigger)});
+document.querySelectorAll('[data-document-text-trigger]').forEach(trigger=>trigger.addEventListener('click',()=>requestDocumentText(trigger)));
+if(selectors.length)selectDocument(selectors[0].dataset.materialSelect);
 })();
 </script>
 {% endif %}

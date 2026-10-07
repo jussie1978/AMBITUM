@@ -80,7 +80,7 @@ def _assert_static_shell() -> None:
         "Obter texto",
         "Revisar texto",
         "Salvar revisão",
-        "Texto derivado (origem)",
+        "Texto extraído",
         "native:'Nativo'",
         "ocr:'OCR'",
         "vlm:'Visão'",
