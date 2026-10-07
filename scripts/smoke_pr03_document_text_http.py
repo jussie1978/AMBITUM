@@ -58,17 +58,19 @@ def main() -> None:
             "foreign.pdf": b"synthetic foreign original",
             "empty.pdf": b"synthetic empty original",
             "rollback.pdf": b"synthetic rollback original",
+            "notes.txt": b"synthetic text original",
         }
         documents: dict[str, SharedDocument] = {}
         for name, content in originals.items():
             path = physical_dir / name
             path.write_bytes(content)
             target_case = case_b if name == "foreign.pdf" else case_a
+            is_text = name.endswith(".txt")
             document = SharedDocument(
                 shared_case_id=target_case.id,
                 filename=name,
-                file_type="pdf",
-                mime_type="application/pdf",
+                file_type="txt" if is_text else "pdf",
+                mime_type="text/plain" if is_text else "application/pdf",
                 sha256=(name.encode("utf-8").hex() + "0" * 64)[:64],
                 storage_relpath=path.relative_to(storage_root).as_posix(),
             )
@@ -234,6 +236,36 @@ def main() -> None:
                 original = client.get(f"/api/documents/{document_ids['primary.pdf']}/original")
                 assert original.status_code == 200
                 assert original.content == originals["primary.pdf"]
+                assert original.headers["content-type"] == "application/pdf"
+                assert original.headers["content-disposition"].startswith("attachment;")
+
+                inline = client.get(
+                    f"/api/documents/{document_ids['primary.pdf']}/original",
+                    params={"disposition": "inline"},
+                )
+                assert inline.status_code == 200
+                assert inline.content == originals["primary.pdf"]
+                assert inline.headers["content-type"] == "application/pdf"
+                assert inline.headers["content-disposition"].startswith("inline;")
+                assert "storage_relpath" not in inline.text
+
+                invalid_disposition = client.get(
+                    f"/api/documents/{document_ids['primary.pdf']}/original",
+                    params={"disposition": "preview"},
+                )
+                assert invalid_disposition.status_code == 422
+
+                missing_original = client.get(
+                    "/api/documents/999999/original",
+                    params={"disposition": "inline"},
+                )
+                assert missing_original.status_code == 404
+
+                unsafe_inline = client.get(
+                    f"/api/documents/{document_ids['notes.txt']}/original",
+                    params={"disposition": "inline"},
+                )
+                assert unsafe_inline.status_code == 415
 
                 def staged_failure(db, **kwargs):
                     document = resolve_source_document(

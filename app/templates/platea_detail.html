@@ -1,401 +1,381 @@
 {% extends "base.html" %}
 {% block content %}
-<!-- ATHENA_UI_STANDARDIZATION_V1 -->
+{% set active_view = request.query_params.get('view', 'overview') %}
 <style>
-/* PadronizaÃ§Ã£o visual Athena â€” mÃ³dulo operacional */
-.sidebar__nav a {
-    font-size: 15px !important;
-    font-weight: 500 !important;
-    line-height: 1.3;
-}
-
-.sidebar__nav .nav-icon {
-    width: 18px !important;
-    height: 18px !important;
-}
-
-.sidebar__footer {
-    min-height: 58px;
-    align-items: center;
-}
-
-.sidebar__footer-label {
-    font-family: var(--font-sans) !important;
-    font-size: 15px !important;
-    font-weight: 600 !important;
-    letter-spacing: -0.01em !important;
-    text-transform: none !important;
-    color: var(--text-primary) !important;
-}
-
-.page-header__title {
-    font-size: 19px !important;
-    font-weight: 620 !important;
-    letter-spacing: -0.015em;
-}
-
-.page-header__subtitle {
-    font-size: 10px !important;
-    line-height: 1.2;
-}
-
-.page-header__user-name {
-    font-size: 15px !important;
-    font-weight: 600 !important;
-}
-
-.page-header__user-role {
-    font-size: 10px !important;
-    color: #92918c !important;
-}
-
-.page-header__avatar {
-    width: 32px !important;
-    height: 32px !important;
-}
-
-.page-content {
-    font-size: 15px;
-}
-
-.alert {
-    font-size: 14px !important;
-    line-height: 1.55;
-}
-
-.section-label {
-    font-family: var(--font-sans) !important;
-    font-size: 12px !important;
-    font-weight: 650 !important;
-    letter-spacing: .055em !important;
-}
-
-.form-label {
-    font-size: 14px !important;
-    font-weight: 550 !important;
-    color: #c1c0bb !important;
-}
-
-.form-input {
-    font-size: 15px !important;
-    line-height: 1.35;
-    min-height: 43px;
-}
-
-.btn-primary,
-.btn-secondary,
-.btn-text {
-    font-family: var(--font-sans) !important;
-}
-
-.btn-primary {
-    font-size: 14px !important;
-    font-weight: 650 !important;
-}
-
-.btn-secondary,
-.btn-text {
-    font-size: 14px !important;
-    font-weight: 500 !important;
-}
-
-.data-table th {
-    font-family: var(--font-sans) !important;
-    font-size: 12px !important;
-    font-weight: 650 !important;
-    letter-spacing: .045em !important;
-    line-height: 1.3;
-}
-
-.data-table td {
-    font-family: var(--font-sans);
-    font-size: 14.5px !important;
-    line-height: 1.45;
-    padding-top: 12px !important;
-    padding-bottom: 12px !important;
-}
-
-.data-table td > div[style*="font-weight:500"] {
-    font-weight: 600 !important;
-}
-
-.data-table .mono-cell {
-    font-family: var(--font-mono) !important;
-    font-size: 12px !important;
-    color: #aaa9a4 !important;
-}
-
-.badge {
-    font-family: var(--font-mono) !important;
-    font-size: 10px !important;
-    font-weight: 500;
-    letter-spacing: .07em !important;
-}
-
-.status-bar {
-    font-size: 9px !important;
-}
-
-/* Banco de Fotos â€” textos auxiliares inline antigos */
-#form-filtros label[style] {
-    font-family: var(--font-sans) !important;
-    font-size: 13.5px !important;
-    line-height: 1.4;
-    color: var(--text-secondary) !important;
-}
-
-#form-filtros input[type="checkbox"],
-#tabela-fotos input[type="checkbox"] {
-    width: 16px !important;
-    height: 16px !important;
-}
-
-/* Melhor leitura dos nomes e atributos principais */
-#tabela-fotos td:nth-child(4),
-#tabela-fotos td:nth-child(5),
-#tabela-fotos td:nth-child(6) {
-    color: var(--text-primary);
-}
-
-/* MantÃ©m dados realmente tÃ©cnicos em mono */
-#tabela-fotos td:nth-child(2),
-#tabela-fotos td:last-child {
-    font-family: var(--font-mono) !important;
-}
-
-/* Evita microtexto herdado nos vazios/paginaÃ§Ã£o */
-.page-content [style*="font-size:12px"] {
-    font-size: 13px !important;
-}
-
-.page-content [style*="font-size:13px"] {
-    font-size: 14px !important;
-}
+.case-shell{flex:1;min-width:0;min-height:100vh;margin-left:var(--sidebar-width);padding-bottom:var(--statusbar-height)}
+.product-topbar{height:var(--header-height);display:flex;align-items:center;gap:14px;padding:0 24px;border-bottom:1px solid var(--border-subtle);background:rgba(34,35,42,.96);position:sticky;top:0;z-index:80}
+.product-topbar__brand{font-size:13px;font-weight:700;letter-spacing:.13em;color:var(--text-primary)}
+.product-topbar__context{display:flex;align-items:center;gap:8px;min-width:0;color:var(--text-secondary);font-size:13px}
+.product-topbar__context a{color:var(--text-tertiary)}
+.product-topbar__context a:hover,.product-topbar__assistant{color:var(--accent)}
+.product-topbar__context strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-primary)}
+.product-topbar__spacer{flex:1}
+.product-topbar__assistant{font-size:13px;font-weight:600}
+.product-topbar__local{display:flex;align-items:center;color:var(--text-tertiary);font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase}
+.product-topbar__operator{padding-left:14px;border-left:1px solid var(--border-subtle);font-size:13px;font-weight:600;white-space:nowrap}
+.case-header{padding:25px 30px 0;border-bottom:1px solid var(--border-subtle);background:#1d1e23}
+.case-header__breadcrumb{font-size:12px;color:var(--text-tertiary);margin-bottom:12px}
+.case-header__breadcrumb a:hover{color:var(--accent)}
+.case-header__row{display:flex;align-items:flex-start;gap:18px}
+.case-header__copy{min-width:0;flex:1}
+.case-header h1{font-size:25px;line-height:1.2;font-weight:650;letter-spacing:-.025em}
+.case-header__meta{display:flex;flex-wrap:wrap;gap:9px 18px;margin-top:10px;color:var(--text-secondary);font-size:13px}
+.case-header__ref{font-family:var(--font-mono);color:var(--accent)}
+.case-status{padding:4px 8px;border:1px solid var(--border-strong);border-radius:4px;font-family:var(--font-mono);font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--success)}
+.case-tabs{display:flex;gap:24px;margin-top:23px}
+.case-tab{padding:0 0 12px;border-bottom:2px solid transparent;color:var(--text-secondary);font-size:14px;font-weight:600}
+.case-tab:hover{color:var(--text-primary)}
+.case-tab.active{border-bottom-color:var(--accent);color:var(--accent)}
+.case-canvas{padding:26px 30px 38px;max-width:1540px;margin:0 auto}
+.overview-grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(280px,.6fr);gap:28px}
+.case-section{min-width:0}
+.case-section+.case-section{margin-top:28px}
+.case-section__head{display:flex;align-items:baseline;justify-content:space-between;padding-bottom:11px;border-bottom:1px solid var(--border-subtle)}
+.case-section__title{font-size:16px;font-weight:650}
+.case-section__meta{font-size:11px;color:var(--text-tertiary)}
+.fact-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 26px}
+.fact{padding:15px 0;border-bottom:1px solid rgba(44,46,56,.65)}
+.fact__label{font-size:11px;color:var(--text-tertiary);margin-bottom:5px}
+.fact__value{font-size:14px;color:var(--text-primary)}
+.activity-summary{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--border-subtle);border-radius:5px;overflow:hidden}
+.activity-summary__item{padding:18px;border-right:1px solid var(--border-subtle)}
+.activity-summary__item:last-child{border-right:0}
+.activity-summary__value{font-size:23px;font-weight:650}
+.activity-summary__label{margin-top:4px;color:var(--text-tertiary);font-size:12px}
+.case-canvas--materials{max-width:none;height:calc(100vh - var(--header-height) - 145px - var(--statusbar-height));min-height:600px;padding:18px 22px 22px}
+.materials-layout{display:grid;grid-template-columns:270px minmax(0,1fr);height:100%;min-height:0;border:1px solid var(--border-subtle);border-radius:6px;overflow:hidden;background:var(--bg-elevated)}
+.materials-list{display:grid;grid-template-rows:auto 1fr;min-width:0;min-height:0;border-right:1px solid var(--border-subtle);background:#1d1e23}
+.materials-list__head{padding:15px 16px;border-bottom:1px solid var(--border-subtle)}
+.materials-list__title{font-size:15px;font-weight:650}
+.materials-list__meta{margin-top:4px;color:var(--text-tertiary);font-size:11px}
+.materials-list__body{min-height:0;overflow:auto}
+.material-item{width:100%;display:block;padding:13px 16px;border:0;border-bottom:1px solid rgba(44,46,56,.7);background:transparent;color:inherit;text-align:left;cursor:pointer}
+.material-item:hover{background:var(--bg-hover)}
+.material-item.active{background:var(--accent-soft);box-shadow:inset 3px 0 var(--accent)}
+.material-item__name{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:600}
+.material-item__meta{display:flex;gap:8px;margin-top:7px;color:var(--text-tertiary);font-family:var(--font-mono);font-size:9px;text-transform:uppercase}
+.material-item__state{color:var(--success)}
+.material-empty{padding:24px 18px;color:var(--text-tertiary);font-size:13px}
+.document-stage{min-width:0;min-height:0;background:var(--bg-base)}
+.document-empty{height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-tertiary);font-size:14px}
+.document-detail[hidden]{display:none}
+.document-detail{height:100%;min-height:0;display:grid;grid-template-rows:auto auto 1fr}
+.document-detail__header{display:flex;align-items:center;gap:18px;min-width:0;padding:12px 16px;border-bottom:1px solid var(--border-subtle);background:#202126}
+.document-detail__identity{min-width:0;flex:1}
+.document-detail__eyebrow{color:var(--accent);font-family:var(--font-mono);font-size:8px;letter-spacing:.1em;text-transform:uppercase}
+.document-detail h2{margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px;line-height:1.25;font-weight:650}
+.document-detail__meta{display:flex;flex-wrap:wrap;gap:5px 13px;margin-top:5px;color:var(--text-tertiary);font-size:10px}
+.document-actions{display:flex;gap:8px;flex:0 0 auto}
+.document-action{min-height:36px;padding:8px 13px;border:1px solid var(--border-strong);border-radius:4px;background:transparent;color:var(--text-secondary);font-size:13px;font-weight:600;cursor:pointer}
+.document-action:hover{border-color:var(--accent);color:var(--accent)}
+.document-action--primary{border-color:var(--accent);background:var(--accent);color:#10171b}
+.document-action--primary:hover{color:#10171b;opacity:.9}
+.document-action:disabled{opacity:.4;cursor:not-allowed}
+.document-workspace{display:grid;grid-template-columns:minmax(360px,1.45fr) minmax(330px,.85fr);min-width:0;min-height:0}
+.document-pane{display:grid;grid-template-rows:auto 1fr;min-width:0;min-height:0}
+.document-pane+.document-pane{border-left:1px solid var(--border-subtle)}
+.document-pane__head{display:flex;align-items:center;justify-content:space-between;height:40px;padding:0 14px;border-bottom:1px solid var(--border-subtle);background:#1d1e23;color:var(--text-secondary);font-size:11px;font-weight:650;letter-spacing:.04em;text-transform:uppercase}
+.document-pane__body{position:relative;min-height:0;overflow:auto;background:#151619}
+.document-original-frame{display:block;width:100%;height:100%;min-height:460px;border:0;background:#2a2b30}
+.document-original-fallback{height:100%;min-height:320px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:28px;text-align:center;color:var(--text-secondary)}
+.document-original-fallback strong{font-size:14px;color:var(--text-primary)}
+.document-original-fallback span{max-width:360px;font-size:12px;line-height:1.5;color:var(--text-tertiary)}
+.document-view-tabs{display:none;gap:4px;padding:0 12px;border-bottom:1px solid var(--border-subtle);background:#191a1e}
+.document-view-tab{padding:9px 12px;border:0;border-bottom:2px solid transparent;background:transparent;color:var(--text-tertiary);font:inherit;font-size:11px;font-weight:650;cursor:pointer}
+.document-view-tab.active{border-bottom-color:var(--accent);color:var(--accent)}
+.document-text-panel{padding:12px 14px 22px}
+.document-text-status{padding:10px 12px;border-left:2px solid var(--accent);background:var(--accent-soft);color:var(--text-secondary);font-size:13px}
+.document-text-status.is-error{border-left-color:var(--error);background:var(--error-soft);color:var(--error)}
+.document-text-page{margin-top:16px;border:1px solid var(--border-subtle);border-radius:5px;background:var(--bg-elevated);overflow:hidden}
+.document-text-page__head{display:flex;justify-content:space-between;padding:10px 13px;border-bottom:1px solid var(--border-subtle);font-family:var(--font-mono);font-size:9px;letter-spacing:.07em;color:var(--text-tertiary)}
+.document-text-page__origin{color:var(--accent)}
+.document-text-page__body{padding:14px}
+.document-text-page__source-label{margin-bottom:6px;color:var(--text-tertiary);font-size:11px;font-weight:600}
+.document-text-page__raw{max-height:310px;overflow:auto;white-space:pre-wrap;color:var(--text-secondary);font-family:var(--font-mono);font-size:12px;line-height:1.6}
+.document-text-page__reviewed{margin-top:13px;padding:12px;border-left:2px solid var(--success);background:var(--success-soft);white-space:pre-wrap;color:var(--text-primary);font-size:13px;line-height:1.55}
+.document-text-page__reviewed-label{margin-bottom:7px;color:var(--success);font-size:11px;font-weight:650}
+.document-text-page__error{margin-top:10px;color:var(--error);font-size:12px}
+.document-text-review{margin-top:13px}
+.document-text-review textarea{width:100%;min-height:130px;margin-top:9px;padding:10px;border:1px solid var(--border-strong);border-radius:4px;background:var(--bg-base);color:var(--text-primary);font:13px/1.55 var(--font-mono);resize:vertical}
+.document-text-review__actions{display:flex;gap:8px;margin-top:8px}
+.document-text-review button{padding:7px 10px;border:1px solid var(--border-strong);border-radius:3px;background:transparent;color:var(--text-secondary);font-size:12px;cursor:pointer}
+.document-text-review button:hover{border-color:var(--accent);color:var(--accent)}
+@media(max-width:1450px){.case-canvas--materials{height:auto;min-height:650px}.materials-layout{grid-template-columns:250px minmax(0,1fr);height:calc(100vh - var(--header-height) - 170px - var(--statusbar-height));min-height:610px}.document-view-tabs{display:flex}.document-workspace{display:block}.document-pane{height:100%}.document-pane[data-document-pane][hidden]{display:none}.document-pane+.document-pane{border-left:0}.document-original-frame{min-height:500px}}
+@media(max-width:900px){.product-topbar__local,.product-topbar__operator{display:none}.case-header,.case-canvas{padding-left:20px;padding-right:20px}.overview-grid{grid-template-columns:1fr}.case-canvas--materials{height:auto;min-height:0;padding:14px}.materials-layout{grid-template-columns:1fr;height:auto;min-height:0}.materials-list{height:230px;border-right:0;border-bottom:1px solid var(--border-subtle)}.document-stage{height:620px}.document-detail__header{align-items:flex-start;flex-direction:column;gap:10px}.document-actions{width:100%}.document-action{flex:1;text-align:center}.document-original-frame{min-height:460px}}
 </style>
+
 <div class="app-layout">
-    <!-- SIDEBAR COMPARTILHADA -->
-    {% include "partials/sidebar.html" %}
+  {% include "partials/sidebar.html" %}
+  <div class="case-shell">
+    <header class="product-topbar">
+      <a class="product-topbar__brand" href="/">AMBITUM</a>
+      <div class="product-topbar__context"><a href="/platea">Casos</a><span>/</span><strong>{{ case.title }}</strong></div>
+      <div class="product-topbar__spacer"></div>
+      <a class="product-topbar__assistant" href="/assistant">Assistente</a>
+      <div class="product-topbar__local"><span class="status-dot status-dot--ok"></span>Local</div>
+      <div class="product-topbar__operator">{{ operator.full_name }}</div>
+    </header>
 
-  <!-- AREA PRINCIPAL -->
-  <div class="main-area">
-    <div class="page-header">
-      <a href="/platea" class="btn-text" style="font-size:12px;opacity:0.7">&larr; Gestor de Investigações</a>
-      <span class="page-header__title" style="margin-left:8px">{{ case.case_ref }}</span>
-      <span class="page-header__subtitle">{{ case.title }}</span>
-      <form method="post" action="/workspace/open/{{ case.case_ref }}" style="margin-left:14px">
-        <button type="submit" class="btn-primary">Abrir Workspace</button>
-      </form>
-      <div class="page-header__spacer"></div>
-      <div class="page-header__user">
-        <div class="page-header__avatar">{{ (operator.full_name or "?")[:2].upper() }}</div>
+    <section class="case-header">
+      <div class="case-header__breadcrumb"><a href="/">Início</a> / <a href="/platea">Casos</a> / {{ case.case_ref }}</div>
+      <div class="case-header__row">
+        <div class="case-header__copy">
+          <h1>{{ case.title }}</h1>
+          <div class="case-header__meta">
+            <span class="case-header__ref">{{ case.case_ref }}</span>
+            {% if case.classification %}<span>{{ case.classification }}</span>{% endif %}
+            {% if case.source_unit %}<span>{{ case.source_unit }}</span>{% endif %}
+          </div>
+        </div>
+        <span class="case-status">{{ case.status }}</span>
+      </div>
+      <nav class="case-tabs" aria-label="Navegação do Caso">
+        <a class="case-tab {% if active_view != 'materials' %}active{% endif %}" href="/platea/{{ case.case_ref }}">Visão geral</a>
+        <a class="case-tab {% if active_view == 'materials' %}active{% endif %}" href="/platea/{{ case.case_ref }}?view=materials">Materiais</a>
+      </nav>
+    </section>
+
+    <main class="case-canvas{% if active_view == 'materials' %} case-canvas--materials{% endif %}">
+      {% if active_view == 'materials' %}
+      <section class="materials-layout" aria-label="Materiais do Caso">
+        <aside class="materials-list">
+          <div class="materials-list__head">
+            <div class="materials-list__title">Documentos</div>
+            <div class="materials-list__meta">{{ documents|length }} documento(s) no Caso</div>
+          </div>
+          <div class="materials-list__body">
+          {% for item in documents %}
+          <button class="material-item{% if loop.first %} active{% endif %}" type="button" data-material-select="{{ item.id }}" aria-pressed="{{ 'true' if loop.first else 'false' }}">
+            <span class="material-item__name">{{ item.filename }}</span>
+            <span class="material-item__meta">
+              <span>{{ item.file_type or item.mime_type or 'documento' }}</span>
+              {% if item.physical_available %}<span class="material-item__state">Original</span>{% else %}<span>Metadados</span>{% endif %}
+            </span>
+          </button>
+          {% else %}
+          <div class="material-empty">Nenhum documento disponível neste Caso.</div>
+          {% endfor %}
+          </div>
+        </aside>
+
+        <div class="document-stage">
+          {% for item in documents %}
+          <article class="document-detail" data-document-detail="{{ item.id }}"{% if not loop.first %} hidden{% endif %}>
+            <header class="document-detail__header">
+            <div class="document-detail__identity">
+            <div class="document-detail__eyebrow">Documento selecionado</div>
+            <h2>{{ item.filename }}</h2>
+            <div class="document-detail__meta">
+              <span>{{ item.file_type or item.mime_type or 'Tipo não informado' }}</span>
+              {% if item.size_bytes is not none %}<span>{{ item.size_bytes }} bytes</span>{% endif %}
+              <span>{{ 'Original disponível' if item.physical_available else 'Somente metadados' }}</span>
+            </div>
+            </div>
+            <div class="document-actions">
+              {% if item.physical_available %}
+              <a class="document-action" href="/api/documents/{{ item.id }}/original" target="_blank" rel="noopener">Abrir original</a>
+              {% endif %}
+              <button class="document-action document-action--primary" type="button" data-document-text-trigger="{{ item.id }}"{% if not item.physical_available %} disabled{% endif %}>Obter texto</button>
+            </div>
+            </header>
+            <div class="document-view-tabs" role="tablist" aria-label="Visualização do documento">
+              <button class="document-view-tab active" type="button" data-document-view="original" role="tab" aria-selected="true">Original</button>
+              <button class="document-view-tab" type="button" data-document-view="text" role="tab" aria-selected="false">Texto / Revisão</button>
+            </div>
+            <div class="document-workspace">
+              <section class="document-pane" data-document-pane="original" aria-label="Original do documento">
+                <div class="document-pane__head"><span>Original / Documento</span></div>
+                <div class="document-pane__body">
+                  {% set can_inline_preview = item.mime_type in ['application/pdf', 'image/png', 'image/jpeg'] %}
+                  {% if item.physical_available and can_inline_preview %}
+                  <iframe class="document-original-frame" title="Original: {{ item.filename }}" src="/api/documents/{{ item.id }}/original?disposition=inline" loading="lazy"></iframe>
+                  {% else %}
+                  <div class="document-original-fallback">
+                    <strong>Pré-visualização indisponível</strong>
+                    <span>{{ item.mime_type or item.file_type or 'Tipo não informado' }}{% if item.physical_available %}. Use Abrir original para consultar este material.{% else %}. O arquivo original não está disponível.{% endif %}</span>
+                  </div>
+                  {% endif %}
+                </div>
+              </section>
+              <section class="document-pane" data-document-pane="text" aria-label="Texto e revisão">
+                <div class="document-pane__head"><span>Texto / Revisão</span></div>
+                <div class="document-pane__body">
+            <div class="document-text-panel" data-document-text-panel="{{ item.id }}">
+              <div class="document-text-status" role="status" aria-live="polite">Sem extração.</div>
+              <div class="document-text-pages"></div>
+            </div>
+                </div>
+              </section>
+            </div>
+          </article>
+          {% else %}
+          <div class="document-empty">Selecione um documento quando houver materiais disponíveis.</div>
+          {% endfor %}
+        </div>
+      </section>
+      {% else %}
+      <div class="overview-grid">
         <div>
-          <div class="page-header__user-name">{{ operator.full_name }}</div>
-          <div class="page-header__user-role">{{ operator.role }}</div>
+          <section class="case-section">
+            <div class="case-section__head"><h2 class="case-section__title">Visão geral</h2><span class="case-section__meta">Dados do Caso</span></div>
+            <div class="fact-grid">
+              <div class="fact"><div class="fact__label">Referência</div><div class="fact__value case-header__ref">{{ case.case_ref }}</div></div>
+              <div class="fact"><div class="fact__label">Status</div><div class="fact__value">{{ case.status }}</div></div>
+              <div class="fact"><div class="fact__label">Classificação</div><div class="fact__value">{{ case.classification or '—' }}</div></div>
+              <div class="fact"><div class="fact__label">Unidade de origem</div><div class="fact__value">{{ case.source_unit or '—' }}</div></div>
+              <div class="fact"><div class="fact__label">Publicado por</div><div class="fact__value">{{ case.published_by }}</div></div>
+              <div class="fact"><div class="fact__label">Versão</div><div class="fact__value">{{ case.published_version }}</div></div>
+            </div>
+          </section>
         </div>
-        <div class="page-header__divider"></div>
-        <form method="post" action="/logout" style="margin:0">
-          <button type="submit" class="btn-logout">Sair</button>
-        </form>
+        <aside>
+          <section class="case-section">
+            <div class="case-section__head"><h2 class="case-section__title">Conteúdo disponível</h2></div>
+            <div class="activity-summary">
+              <a class="activity-summary__item" href="/platea/{{ case.case_ref }}?view=materials"><div class="activity-summary__value">{{ documents|length }}</div><div class="activity-summary__label">documentos</div></a>
+              <div class="activity-summary__item"><div class="activity-summary__value">{{ persons|length }}</div><div class="activity-summary__label">pessoas</div></div>
+              <div class="activity-summary__item"><div class="activity-summary__value">{{ links|length }}</div><div class="activity-summary__label">vínculos</div></div>
+            </div>
+          </section>
+        </aside>
       </div>
-    </div>
-
-    <div class="page-content">
-
-      <!-- AVISO DE ACESSO REGISTRADO -->
-      <div class="alert alert--warning" style="margin-bottom:20px">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="flex-shrink:0;margin-top:1px"><path d="M8 1L15 14H1L8 1z"/><path d="M8 6v4M8 11.5v.5"/></svg>
-        <span>Este acesso foi registrado no log de auditoria. Os dados exibidos mantêm sua origem registrada e não substituem os registros originais da fonte.</span>
-      </div>
-
-      <!-- CABECALHO DO CASO -->
-      <div class="card mb-4">
-        <div class="section-label">Identificacao do caso</div>
-        <div class="grid-3" style="gap:20px">
-          <div>
-            <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:4px">Referencia</div>
-            <div class="mono" style="font-size:15px;font-weight:600;color:var(--accent)">{{ case.case_ref }}</div>
-          </div>
-          <div>
-            <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:4px">Titulo</div>
-            <div style="font-weight:500">{{ case.title }}</div>
-          </div>
-          <div>
-            <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:4px">Status</div>
-            {% if case.status == "aberto" %}
-              <span class="badge badge--success">Aberto</span>
-            {% elif case.status == "arquivado" %}
-              <span class="badge badge--muted">Arquivado</span>
-            {% else %}
-              <span class="badge badge--warning">{{ case.status }}</span>
-            {% endif %}
-          </div>
-          <div>
-            <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:4px">Classificacao</div>
-            <div>{{ case.classification or "—" }}</div>
-          </div>
-          <div>
-            <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:4px">Unidade de origem</div>
-            <div>{{ case.source_unit or "—" }}</div>
-          </div>
-          <div>
-            <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:4px">Publicado por</div>
-            <div class="mono" style="font-size:12px">{{ case.published_by }}</div>
-          </div>
-          <div>
-            <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:4px">Publicado em</div>
-            <div class="mono" style="font-size:12px">{{ case.published_at.strftime("%d/%m/%Y %H:%M") }}</div>
-          </div>
-          <div>
-            <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:4px">Versao</div>
-            <div class="mono" style="font-size:12px">v{{ case.published_version }}</div>
-          </div>
-          {% if case.last_updated_at %}
-          <div>
-            <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:4px">Ultima atualizacao</div>
-            <div class="mono" style="font-size:12px">{{ case.last_updated_at.strftime("%d/%m/%Y %H:%M") }}</div>
-          </div>
-          {% endif %}
-        </div>
-        {% if case.notes %}
-        <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border-subtle)">
-          <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:6px">Observacoes</div>
-          <div style="font-size:13px;color:var(--text-secondary);line-height:1.6">{{ case.notes }}</div>
-        </div>
-        {% endif %}
-      </div>
-
-      <!-- PESSOAS -->
-      <div class="card mb-4">
-        <div class="section-label">Pessoas ({{ persons|length }})</div>
-        {% if persons %}
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>Alcunhas</th>
-              <th>CPF</th>
-              <th>RG</th>
-              <th>Nascimento</th>
-              <th>Papel no caso</th>
-              <th>Confiabilidade</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for p in persons %}
-            <tr>
-              <td style="font-weight:500">{{ p.full_name }}</td>
-              <td class="text-secondary">{{ p.aliases or "—" }}</td>
-              <td class="mono-cell">{{ p.cpf or "—" }}</td>
-              <td class="mono-cell">{{ p.rg or "—" }}</td>
-              <td class="mono-cell">{{ p.birth_date or "—" }}</td>
-              <td>{{ p.role_in_case or "—" }}</td>
-              <td>
-                {% if p.reliability_level == "high" or p.reliability_level == "alto" %}
-                  <span class="badge badge--success">Alto</span>
-                {% elif p.reliability_level == "medium" or p.reliability_level == "medio" %}
-                  <span class="badge badge--warning">Medio</span>
-                {% elif p.reliability_level == "low" or p.reliability_level == "baixo" %}
-                  <span class="badge badge--error">Baixo</span>
-                {% else %}
-                  <span class="badge badge--muted">{{ p.reliability_level or "—" }}</span>
-                {% endif %}
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-        {% else %}
-        <div style="color:var(--text-tertiary);font-size:13px;padding:12px 0">Nenhuma pessoa compartilhada neste caso.</div>
-        {% endif %}
-      </div>
-
-      <!-- DOCUMENTOS -->
-      <div class="card mb-4">
-        <div class="section-label">Documentos ({{ documents|length }})</div>
-        {% if documents %}
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Arquivo</th>
-              <th>Tipo</th>
-              <th>Descricao</th>
-              <th>SHA-256</th>
-              <th>Importado em</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for d in documents %}
-            <tr>
-              <td style="font-weight:500">{{ d.filename }}</td>
-              <td>
-                {% if d.file_type %}
-                  <span class="badge badge--muted">{{ d.file_type.upper() }}</span>
-                {% else %}—{% endif %}
-              </td>
-              <td class="text-secondary">{{ d.description or "—" }}</td>
-              <td class="mono-cell" style="font-size:10px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="{{ d.sha256 or '' }}">
-                {{ d.sha256[:16] + "..." if d.sha256 else "—" }}
-              </td>
-              <td class="mono-cell">{{ d.imported_at or "—" }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-        {% else %}
-        <div style="color:var(--text-tertiary);font-size:13px;padding:12px 0">Nenhum documento compartilhado neste caso.</div>
-        {% endif %}
-      </div>
-
-      <!-- VINCULOS -->
-      <div class="card">
-        <div class="section-label">Vinculos ({{ links|length }})</div>
-        {% if links %}
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Tipo</th>
-              <th>Entidade A</th>
-              <th>Entidade B</th>
-              <th>Natureza</th>
-              <th>Observacoes</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for lk in links %}
-            <tr>
-              <td><span class="badge badge--muted">{{ lk.link_type }}</span></td>
-              <td>
-                <div style="font-weight:500">{{ lk.entity_a_name or lk.entity_a_ref }}</div>
-                <div class="mono-cell" style="font-size:10px;color:var(--text-tertiary)">{{ lk.entity_a_ref }}</div>
-              </td>
-              <td>
-                <div style="font-weight:500">{{ lk.entity_b_name or lk.entity_b_ref }}</div>
-                <div class="mono-cell" style="font-size:10px;color:var(--text-tertiary)">{{ lk.entity_b_ref }}</div>
-              </td>
-              <td class="text-secondary">{{ lk.link_nature or "—" }}</td>
-              <td class="text-secondary">{{ lk.notes or "—" }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-        {% else %}
-        <div style="color:var(--text-tertiary);font-size:13px;padding:12px 0">Nenhum vinculo compartilhado neste caso.</div>
-        {% endif %}
-      </div>
-
-    </div>
+      {% endif %}
+    </main>
   </div>
-
-  <!-- STATUS BAR -->
-  <div class="status-bar">
-    <span><span class="status-dot status-dot--ok"></span>Athena online</span>
-    <span class="status-bar__sep">|</span>
-    <span>{{ operator.username if operator else "" }}</span>
-    <span class="status-bar__sep">|</span>
-    <span>Gestor de Investigações &rsaquo; {{ case.case_ref }}</span>
-    <span class="status-bar__sep">|</span>
-    <span style="color:var(--warning)">Acesso registrado</span>
-  </div>
+  <div class="status-bar"><span><span class="status-dot status-dot--ok"></span>AMBITUM local</span><span class="status-bar__sep">|</span><span>Caso {{ case.case_ref }}</span></div>
 </div>
-{% endblock %}
 
+{% if active_view == 'materials' %}
+<script>
+(() => {
+const caseRef={{ case.case_ref|tojson }};
+const selectors=Array.from(document.querySelectorAll('[data-material-select]'));
+const details=Array.from(document.querySelectorAll('[data-document-detail]'));
+const documentTextState=new Map();
+const compactDocumentWorkspace=window.matchMedia('(max-width:1450px)');
+
+function setDocumentView(detail,view){
+  detail.querySelectorAll('[data-document-view]').forEach(tab=>{
+    const active=tab.dataset.documentView===view;
+    tab.classList.toggle('active',active);
+    tab.setAttribute('aria-selected',String(active));
+  });
+  detail.querySelectorAll('[data-document-pane]').forEach(pane=>{pane.hidden=compactDocumentWorkspace.matches&&pane.dataset.documentPane!==view});
+}
+compactDocumentWorkspace.addEventListener('change',()=>details.forEach(detail=>{
+  const activeTab=detail.querySelector('[data-document-view].active');
+  setDocumentView(detail,activeTab?.dataset.documentView||'original');
+}));
+function selectDocument(documentId){
+  const targetId=String(documentId);
+  selectors.forEach(item=>{
+    const active=item.dataset.materialSelect===targetId;
+    item.classList.toggle('active',active);
+    item.setAttribute('aria-pressed',String(active));
+  });
+  details.forEach(item=>{item.hidden=item.dataset.documentDetail!==targetId});
+  const detail=details.find(item=>item.dataset.documentDetail===targetId);
+  if(!detail)return;
+  setDocumentView(detail,'original');
+  const trigger=detail.querySelector('[data-document-text-trigger]');
+  if(trigger&&!trigger.disabled&&!documentTextState.has(targetId))loadDocumentText(targetId);
+}
+selectors.forEach(item=>item.addEventListener('click',event=>{
+  event.preventDefault();
+  event.stopPropagation();
+  selectDocument(item.dataset.materialSelect);
+}));
+details.forEach(detail=>detail.querySelectorAll('[data-document-view]').forEach(tab=>tab.addEventListener('click',()=>setDocumentView(detail,tab.dataset.documentView))));
+
+function documentTextEndpoint(documentId){
+  return '/api/cases/'+encodeURIComponent(caseRef)+'/documents/'+encodeURIComponent(documentId)+'/text-extraction';
+}
+function documentTextOrigin(executorType){
+  return {native:'Nativo',ocr:'OCR',vlm:'Visão'}[executorType]||executorType||'Desconhecida';
+}
+function setDocumentTextStatus(panel,message,isError=false){
+  const status=panel?.querySelector('.document-text-status');
+  if(!status)return;
+  status.textContent=message;
+  status.classList.toggle('is-error',isError);
+}
+function renderDocumentText(documentId,payload){
+  const panel=document.querySelector('[data-document-text-panel="'+documentId+'"]');
+  if(!panel)return;
+  const pagesContainer=panel.querySelector('.document-text-pages');
+  pagesContainer.replaceChildren();
+  const extraction=payload?.extraction||null;
+  documentTextState.set(String(documentId),payload||{state:'empty',extraction:null});
+  if(!extraction){setDocumentTextStatus(panel,'Sem extração.');return;}
+  const pages=Array.isArray(extraction.pages)?extraction.pages:[];
+  const readyPages=pages.filter(page=>page.status==='ready').length;
+  const provenances=[...new Set(pages.map(page=>documentTextOrigin(page.executor_type)))];
+  const detail=document.querySelector('[data-document-detail="'+documentId+'"]');
+  const summaryStatus=detail?.querySelector('.document-detail__meta span:last-child');
+  if(summaryStatus)summaryStatus.textContent=(provenances.join(' + ')||documentTextOrigin(extraction.executor_type))+' / '+(payload.state||extraction.status||'desconhecido');
+  if(payload.state==='processing')setDocumentTextStatus(panel,'Processando…');
+  else if(payload.state==='ready')setDocumentTextStatus(panel,'Texto disponível.');
+  else if(readyPages>0)setDocumentTextStatus(panel,'Extração parcial: há páginas com falha.',true);
+  else setDocumentTextStatus(panel,'Extração falhou.',true);
+  pages.forEach(page=>{
+    const article=document.createElement('article');article.className='document-text-page';
+    const head=document.createElement('div');head.className='document-text-page__head';
+    const pageLabel=document.createElement('span');pageLabel.textContent='PÁGINA '+page.page_number;
+    const origin=document.createElement('span');origin.className='document-text-page__origin';origin.textContent=documentTextOrigin(page.executor_type);
+    head.append(pageLabel,origin);article.appendChild(head);
+    const body=document.createElement('div');body.className='document-text-page__body';
+    if(page.raw_text){
+      const rawLabel=document.createElement('div');rawLabel.className='document-text-page__source-label';rawLabel.textContent='Texto extraído';
+      const raw=document.createElement('pre');raw.className='document-text-page__raw';raw.setAttribute('aria-label','Texto extraído');raw.textContent=page.raw_text;
+      body.append(rawLabel,raw);
+    }
+    if(page.reviewed_text!==null&&page.reviewed_text!==undefined){
+      const reviewed=document.createElement('div');reviewed.className='document-text-page__reviewed';
+      const reviewedLabel=document.createElement('div');reviewedLabel.className='document-text-page__reviewed-label';reviewedLabel.textContent='Texto revisado';
+      const reviewedText=document.createElement('div');reviewedText.textContent=page.reviewed_text;
+      reviewed.append(reviewedLabel,reviewedText);body.appendChild(reviewed);
+    }
+    if(page.status==='failed'){
+      const error=document.createElement('div');error.className='document-text-page__error';error.textContent='Falha: '+(page.error_code||page.error_detail||'texto não obtido');body.appendChild(error);
+    }
+    const review=document.createElement('div');review.className='document-text-review';
+    const openReview=document.createElement('button');openReview.type='button';openReview.textContent='Revisar texto';review.appendChild(openReview);
+    openReview.addEventListener('click',()=>{
+      openReview.hidden=true;
+      const textarea=document.createElement('textarea');textarea.value=page.reviewed_text??page.raw_text??'';textarea.setAttribute('aria-label','Texto revisado da página '+page.page_number);
+      const actions=document.createElement('div');actions.className='document-text-review__actions';
+      const save=document.createElement('button');save.type='button';save.textContent='Salvar revisão';
+      const cancel=document.createElement('button');cancel.type='button';cancel.textContent='Cancelar';actions.append(save,cancel);
+      if(page.reviewed_text!==null&&page.reviewed_text!==undefined){const clear=document.createElement('button');clear.type='button';clear.textContent='Limpar revisão';clear.addEventListener('click',()=>saveDocumentTextReview(documentId,extraction.id,page.page_number,null,panel));actions.appendChild(clear)}
+      review.append(textarea,actions);
+      cancel.addEventListener('click',()=>{textarea.remove();actions.remove();openReview.hidden=false});
+      save.addEventListener('click',()=>saveDocumentTextReview(documentId,extraction.id,page.page_number,textarea.value,panel));
+    });
+    body.appendChild(review);article.appendChild(body);pagesContainer.appendChild(article);
+  });
+}
+async function saveDocumentTextReview(documentId,extractionId,pageNumber,reviewedText,panel){
+  setDocumentTextStatus(panel,'Salvando revisão…');
+  try{
+    const response=await fetch(documentTextEndpoint(documentId)+'/'+encodeURIComponent(extractionId)+'/pages/'+encodeURIComponent(pageNumber)+'/review',{method:'PUT',headers:{'Accept':'application/json','Content-Type':'application/json'},body:JSON.stringify({reviewed_text:reviewedText})});
+    const payload=await response.json();if(!response.ok)throw new Error(payload?.error||('Erro HTTP '+response.status));
+    const current=documentTextState.get(String(documentId));const pageIndex=current.extraction.pages.findIndex(page=>page.page_number===pageNumber);if(pageIndex>=0)current.extraction.pages[pageIndex]=payload.page;
+    renderDocumentText(documentId,current);setDocumentTextStatus(panel,'Revisão salva.');
+  }catch(error){setDocumentTextStatus(panel,error?.message||'Erro HTTP ao salvar revisão.',true)}
+}
+async function loadDocumentText(documentId){
+  const panel=document.querySelector('[data-document-text-panel="'+documentId+'"]');
+  try{const response=await fetch(documentTextEndpoint(documentId),{headers:{'Accept':'application/json'}});const payload=await response.json();if(!response.ok)throw new Error(payload?.error||('Erro HTTP '+response.status));renderDocumentText(documentId,payload)}
+  catch(error){setDocumentTextStatus(panel,error?.message||'Erro HTTP ao consultar texto.',true)}
+}
+async function requestDocumentText(trigger){
+  const documentId=trigger.dataset.documentTextTrigger;const panel=document.querySelector('[data-document-text-panel="'+documentId+'"]');const detail=trigger.closest('[data-document-detail]');trigger.disabled=true;setDocumentView(detail,'text');setDocumentTextStatus(panel,'Processando…');
+  try{const response=await fetch(documentTextEndpoint(documentId),{method:'POST',headers:{'Accept':'application/json','Content-Type':'application/json'},body:'{}'});const payload=await response.json();if(!response.ok)throw new Error(payload?.error||('Erro HTTP '+response.status));renderDocumentText(documentId,payload)}
+  catch(error){setDocumentTextStatus(panel,error?.message||'Erro HTTP ao obter texto.',true)}finally{trigger.disabled=false}
+}
+document.querySelectorAll('[data-document-text-trigger]').forEach(trigger=>trigger.addEventListener('click',()=>requestDocumentText(trigger)));
+if(selectors.length)selectDocument(selectors[0].dataset.materialSelect);
+})();
+</script>
+{% endif %}
+{% endblock %}

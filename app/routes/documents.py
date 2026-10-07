@@ -1,6 +1,7 @@
 ﻿from __future__ import annotations
 
 from pathlib import Path
+from typing import Literal
 
 from fastapi import APIRouter, File, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
@@ -38,6 +39,11 @@ from app.services.storage_service import (
 
 
 router = APIRouter()
+INLINE_PREVIEW_MIME_TYPES = frozenset({
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+})
 
 
 class TextExtractionRequest(BaseModel):
@@ -527,6 +533,7 @@ async def document_intake(
 async def document_original(
     request: Request,
     document_id: int,
+    disposition: Literal["attachment", "inline"] = "attachment",
 ):
     operator = request.session.get("operator", {})
     ip = request.client.host if request.client else None
@@ -568,6 +575,18 @@ async def document_original(
                 status_code=409,
             )
 
+        if (
+            disposition == "inline"
+            and document.mime_type not in INLINE_PREVIEW_MIME_TYPES
+        ):
+            return JSONResponse(
+                {"error": "Tipo de documento sem preview inline seguro."},
+                status_code=415,
+            )
+
+        content_disposition_type = (
+            "inline" if disposition == "inline" else "attachment"
+        )
         storage = _case_storage()
 
         try:
@@ -632,7 +651,7 @@ async def document_original(
             path=str(original_path),
             media_type=document.mime_type or "application/octet-stream",
             filename=document.filename,
-            content_disposition_type="attachment",
+            content_disposition_type=content_disposition_type,
         )
 
     except Exception:
